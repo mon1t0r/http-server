@@ -23,7 +23,7 @@ RELCFLAGS:=-O3
 DBGDIR:=debug
 DBGTARGET:=$(DBGDIR)/$(TARGET)
 DBGOBJS:=$(addprefix $(DBGDIR)/, $(OBJS))
-DBGCFLAGS:=-g -O0
+DBGCFLAGS:=-g -O0 -DDEBUG
 
 # Utility commands
 rm:=rm -rf
