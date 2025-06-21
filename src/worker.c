@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 
@@ -27,7 +28,7 @@ static int header_parse(struct http_request *request, char *str)
         return 1;
     }
 
-    http_request_add_header(request, &header);
+    http_add_header(&request->headers, &header);
 
     return 1;
 }
@@ -97,7 +98,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     }
 
     buf_len = buf_pos = 0;
-    http_request_empty(&request);
+    memset(&request, 0, sizeof(request));
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
@@ -130,8 +131,8 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         }
 
         buf_len = buf_pos = 0;
-        http_request_remove_headers(&request);
-        http_request_empty(&request);
+        http_remove_headers(&request.headers);
+        memset(&request, 0, sizeof(request));
     }
 
 exit:

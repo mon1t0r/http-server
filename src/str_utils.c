@@ -23,7 +23,8 @@ int find_crlf(const char *str, int len)
 }
 
 
-int parse_uint(const char *str) {
+int parse_uint(const char *str)
+{
     long res;
 
     if(str[0] == '\0') {
