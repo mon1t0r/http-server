@@ -12,20 +12,67 @@ enum {
     recv_buf_size = 8192
 };
 
+static int header_create_add(struct http_request *request, char *str)
+{
+    struct http_header_entry *header;
+    int parse_res;
+
+    header = malloc(sizeof(struct http_header_entry));
+
+    parse_res = http_header_parse(header, str);
+    if(!parse_res) {
+        free(header);
+        return 0;
+    }
+
+    /* Unknown header type - ignore */
+    if(header->type == http_header_unknown) {
+        free(header);
+        return 1;
+    }
+
+    http_request_add_header(request, header);
+
+    return 1;
+}
+
+static void header_free_all(struct http_request *request) {
+    struct http_header_entry *header_temp;
+
+    while(request->headers != NULL) {
+        header_temp = request->headers->next;
+
+        free(request->headers);
+
+        request->headers = header_temp;
+    }
+}
+
 static int handle_data(struct http_request *request, char *buf,
                        int buf_len, int *buf_pos)
 {
     int line_len;
+    int parse_res;
+    char *line;
 
-    while((line_len = find_crlf(buf + *buf_pos, buf_len)) >= 0) {
-        buf[*buf_pos + line_len] = '\0';
+    for(;;) {
+        line_len = find_crlf(buf + *buf_pos, buf_len);
+        if(line_len < 0) {
+            break;
+        }
 
-        if(*buf_pos == 0) {
-            if(!fill_http_request_line(&request->request_line, buf)) {
+        line = buf + *buf_pos;
+        *buf_pos += line_len + 2;
+
+        line[line_len] = '\0';
+
+        /* *buf_pos == 0, beginning of the data */
+        if(buf == line) {
+            parse_res = http_request_line_parse(&request->request_line, line);
+            if(!parse_res) {
                 /* Request line parsing failed - error */
                 return -1;
             }
-            *buf_pos += line_len + 2;
             continue;
         }
 
@@ -34,9 +81,10 @@ static int handle_data(struct http_request *request, char *buf,
             return 1;
         }
 
-        /* TODO: Parse header fields */
-
-        *buf_pos += line_len + 2;
+        parse_res = header_create_add(request, line);
+        if(!parse_res) {
+            return -1;
+        }
     }
 
     /* More data required */
@@ -45,10 +93,21 @@ static int handle_data(struct http_request *request, char *buf,
 
 static void handle_request(const struct http_request *request)
 {
-    printf("Received HTTP request: %d %s %d.%d\n", request->request_line.method,
+    struct http_header_entry *header;
+
+    printf("Received HTTP request: %d %s %d.%d\n",
+           request->request_line.method,
            request->request_line.request_uri,
            request->request_line.version_major,
            request->request_line.version_minor);
+
+    printf("Headers:\n");
+
+    header = request->headers;
+    while(header != NULL) {
+        printf("%d: %s\n", header->type, header->value);
+        header = header->next;
+    }
 }
 
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
@@ -95,9 +154,9 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         }
 
         buf_len = buf_pos = 0;
+        header_free_all(&request);
         memset(&request, 0, sizeof(request));
     }
-
 
 exit:
     free(buf);
