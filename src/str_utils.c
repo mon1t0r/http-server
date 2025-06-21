@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <limits.h>
 
@@ -40,4 +41,17 @@ int parse_uint(const char *str) {
     }
 
     return res;
+}
+
+int find_str(const char * const *arr, int arr_len, const char *str)
+{
+    int i;
+
+    for(i = 0; i < arr_len; i++) {
+        if(0 == strcmp(str, arr[i])) {
+            return i;
+        }
+    }
+
+    return -1;
 }

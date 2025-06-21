@@ -3,7 +3,7 @@
 
 #include <arpa/inet.h>
 
-#include "http.h"
+#include "http_request.h"
 
 void handler_handle_request(const struct http_request *request,
                             const struct sockaddr_in *addr);
