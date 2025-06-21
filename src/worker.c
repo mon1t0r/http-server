@@ -114,6 +114,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 {
     char *buf;
     int buf_len;
+    int exit_code;
 
     struct http_request request;
 
@@ -129,16 +130,17 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
         if(data_len < 0) {
             perror("recv()");
+            exit_code = EXIT_FAILURE;
+            goto exit;
+        }
+        if(data_len == 0) {
+            exit_code = EXIT_SUCCESS;
             goto exit;
         }
 
         buf_len += data_len;
 
-        if(data_len != 0) {
-            handle_res = handle_data(&request, buf, buf_len, &buf_pos);
-        } else {
-            handle_res = 1;
-        }
+        handle_res = handle_data(&request, buf, buf_len, &buf_pos);
 
         /*
          * handle_res == 0  : continue receiving data
@@ -161,5 +163,5 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 exit:
     free(buf);
     close(conn_fd);
-    return EXIT_FAILURE;
+    return exit_code;
 }
