@@ -48,7 +48,7 @@ static void header_free_all(struct http_request *request) {
     }
 }
 
-static int handle_data(struct http_request *request, char *buf,
+static int receive_data(struct http_request *request, char *buf,
                        int buf_len, int *buf_pos)
 {
     int line_len;
@@ -140,7 +140,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         buf_len += data_len;
 
-        handle_res = handle_data(&request, buf, buf_len, &buf_pos);
+        handle_res = receive_data(&request, buf, buf_len, &buf_pos);
 
         /*
          * handle_res == 0  : continue receiving data

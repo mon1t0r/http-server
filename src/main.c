@@ -1,9 +1,15 @@
+/* signal.h */
+#define _POSIX_C_SOURCE 1
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
+#include <errno.h>
+#include <signal.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "worker.h"
@@ -13,7 +19,30 @@ enum {
     max_pending_conns = 5
 };
 
-int socket_create(void) {
+static void sigchld_handle(int sig)
+{
+    waitpid(-1, NULL, WNOHANG);
+}
+
+static int set_sigaction(void)
+{
+    struct sigaction sa;
+    int res;
+
+    sa.sa_handler = &sigchld_handle;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    res = sigaction(SIGCHLD, &sa, NULL);
+    if(res < 0) {
+        perror("sigaction()");
+    }
+
+    return res;
+}
+
+static int socket_create(void)
+{
     int sock_fd;
 
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -24,7 +53,8 @@ int socket_create(void) {
     return sock_fd;
 }
 
-int socket_set_reuseaddr(int sock_fd) {
+static int socket_set_reuseaddr(int sock_fd)
+{
     int val;
 
     val = 1;
@@ -36,7 +66,7 @@ int socket_set_reuseaddr(int sock_fd) {
     return val;
 }
 
-int socket_bind(int sock_fd) {
+static int socket_bind(int sock_fd) {
     struct sockaddr_in sock_addr;
     int res;
 
@@ -53,7 +83,8 @@ int socket_bind(int sock_fd) {
     return res;
 }
 
-int socket_listen(int sock_fd) {
+static int socket_listen(int sock_fd)
+{
     int res;
 
     res = listen(sock_fd, max_pending_conns);
@@ -78,12 +109,10 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-#ifdef DEBUG
     res = socket_set_reuseaddr(sock_fd);
     if(res < 0) {
         goto exit;
     }
-#endif
 
     res = socket_bind(sock_fd);
     if(res < 0) {
@@ -95,11 +124,20 @@ int main(void)
         goto exit;
     }
 
+    res = set_sigaction();
+    if(res < 0) {
+        goto exit;
+    }
+
     for(;;) {
         conn_addr_len = sizeof(conn_addr);
         conn_fd = accept(sock_fd, (struct sockaddr *) &conn_addr,
                          &conn_addr_len);
         if(conn_fd < 0) {
+            /* Interrupted by a signal */
+            if(errno == EINTR) {
+                continue;
+            }
             perror("accept()");
             goto exit;
         }
