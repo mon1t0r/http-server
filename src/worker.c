@@ -1,12 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#include "str_utils.h"
 #include "worker.h"
 #include "http.h"
-#include "str_utils.h"
+#include "request_handler.h"
 
 enum {
     recv_buf_size = 8192
@@ -75,24 +75,6 @@ static int receive_data(struct http_request *request, char *buf,
     return 0;
 }
 
-static void handle_request(const struct http_request *request)
-{
-    struct http_header_entry *header;
-
-    printf("Received HTTP request: %d %s %d.%d\n",
-           request->request_line.method,
-           request->request_line.request_uri,
-           request->request_line.version_major,
-           request->request_line.version_minor);
-
-    printf("Headers:\n");
-
-    header = request->headers;
-    while(header != NULL) {
-        printf("%d: %s\n", header->type, header->value);
-        header = header->next;
-    }
-}
 
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
 {
@@ -144,7 +126,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         }
 
         if(handle_res > 0) {
-            handle_request(&request);
+            handler_handle_request(&request, addr);
         }
 
         buf_len = buf_pos = 0;
