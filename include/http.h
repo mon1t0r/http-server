@@ -56,7 +56,11 @@ int http_request_line_parse(struct http_request_line *request_line, char *str);
 
 int http_header_parse(struct http_header_entry *header, char *str);
 
+void http_request_empty(struct http_request *request);
+
 void http_request_add_header(struct http_request *request,
-                             struct http_header_entry *header);
+                             const struct http_header_entry *header_src);
+
+void http_request_remove_headers(struct http_request *request);
 
 #endif

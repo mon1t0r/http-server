@@ -12,40 +12,24 @@ enum {
     recv_buf_size = 8192
 };
 
-static int header_create_add(struct http_request *request, char *str)
+static int header_parse(struct http_request *request, char *str)
 {
-    struct http_header_entry *header;
+    struct http_header_entry header;
     int parse_res;
 
-    header = malloc(sizeof(struct http_header_entry));
-
-    parse_res = http_header_parse(header, str);
+    parse_res = http_header_parse(&header, str);
     if(!parse_res) {
-        free(header);
         return 0;
     }
 
     /* Unknown header type - ignore */
-    if(header->type == http_header_unknown) {
-        free(header);
+    if(header.type == http_header_unknown) {
         return 1;
     }
 
-    http_request_add_header(request, header);
+    http_request_add_header(request, &header);
 
     return 1;
-}
-
-static void header_free_all(struct http_request *request) {
-    struct http_header_entry *header_temp;
-
-    while(request->headers != NULL) {
-        header_temp = request->headers->next;
-
-        free(request->headers);
-
-        request->headers = header_temp;
-    }
 }
 
 static int receive_data(struct http_request *request, char *buf,
@@ -81,7 +65,7 @@ static int receive_data(struct http_request *request, char *buf,
             return 1;
         }
 
-        parse_res = header_create_add(request, line);
+        parse_res = header_parse(request, line);
         if(!parse_res) {
             return -1;
         }
@@ -122,15 +106,21 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     int data_len;
     int handle_res;
 
+    exit_code = EXIT_FAILURE;
+
     buf = malloc(recv_buf_size);
+    if(!buf) {
+        perror("malloc()");
+        goto exit;
+    }
+
     buf_len = buf_pos = 0;
-    memset(&request, 0, sizeof(request));
+    http_request_empty(&request);
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
         if(data_len < 0) {
             perror("recv()");
-            exit_code = EXIT_FAILURE;
             goto exit;
         }
         if(data_len == 0) {
@@ -146,8 +136,10 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
          * handle_res == 0  : continue receiving data
          * handle_res == 1  : stop receiving and attempt to handle request
          * handle_res == -1 : stop receiving wihtout attempting to handle
+         *
+         * Continue receiving only when there is space in buffer left
          */
-        if(handle_res == 0) {
+        if(handle_res == 0 && buf_len < recv_buf_size) {
             continue;
         }
 
@@ -156,8 +148,8 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         }
 
         buf_len = buf_pos = 0;
-        header_free_all(&request);
-        memset(&request, 0, sizeof(request));
+        http_request_remove_headers(&request);
+        http_request_empty(&request);
     }
 
 exit:

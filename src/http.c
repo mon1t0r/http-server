@@ -102,11 +102,23 @@ int http_header_parse(struct http_header_entry *header, char *str)
     return 1;
 }
 
-void http_request_add_header(struct http_request *request,
-                             struct http_header_entry *header)
+void http_request_empty(struct http_request *request)
 {
+    memset(request, 0, sizeof(struct http_request));
+}
+
+void http_request_add_header(struct http_request *request,
+                             const struct http_header_entry *header_src)
+{
+    struct http_header_entry *header;
     struct http_header_entry *header_temp;
 
+    header = malloc(sizeof(struct http_header_entry));
+    if(!header) {
+        return;
+    }
+
+    memcpy(header, header_src, sizeof(struct http_header_entry));
     header->next = NULL;
 
     if(request->headers == NULL) {
@@ -120,4 +132,19 @@ void http_request_add_header(struct http_request *request,
     }
 
     header_temp->next = header;
+}
+
+void http_request_remove_headers(struct http_request *request)
+{
+    struct http_header_entry *header_temp;
+
+    while(request->headers != NULL) {
+        header_temp = request->headers->next;
+
+        free(request->headers);
+
+        request->headers = header_temp;
+    }
+
+    request->headers = NULL;
 }
