@@ -80,6 +80,22 @@ void http_add_header(struct http_header_entry **headers,
     header_temp->next = header;
 }
 
+const struct http_header_entry *http_get_header(
+    const struct http_header_entry **headers, enum http_header_type type)
+{
+    const struct http_header_entry *header;
+
+    header = *headers;
+    while(header != NULL) {
+        if(header->type == type) {
+            return header;
+        }
+        header = header->next;
+    }
+
+    return NULL;
+}
+
 void http_remove_headers(struct http_header_entry **headers)
 {
     struct http_header_entry *header_temp;

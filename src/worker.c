@@ -52,6 +52,8 @@ static enum recv_status data_receive(struct http_request *request, char *buf,
     int parse_res;
     char *line;
 
+    /* TODO: Receive request content */
+
     for(;;) {
         line_len = find_crlf(buf + *buf_pos, buf_len);
         if(line_len < 0) {
@@ -153,6 +155,9 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         buf_len += data_len;
 
         recv_status = data_receive(&request, buf, buf_len, &buf_pos);
+        if(recv_status == recv_stop_error) {
+            goto exit;
+        }
 
         /*
          * Continue receiving only when there is space in buffer left
@@ -161,14 +166,12 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
             continue;
         }
 
-        if(recv_status == recv_stop_handle) {
-            handle_status = handler_handle_request(&request, addr, &response);
-            if(handle_status) {
-                send_status = response_send(conn_fd, &response, buf,
-                                            recv_buf_size);
-                if(send_status == send_fatal_error) {
-                    goto exit;
-                }
+        handle_status = handler_handle_request(&request, addr, &response);
+        if(handle_status) {
+            send_status = response_send(conn_fd, &response, buf,
+                                        recv_buf_size);
+            if(send_status == send_fatal_error) {
+                goto exit;
             }
         }
 

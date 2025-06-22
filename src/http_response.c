@@ -4,6 +4,8 @@
 #include "http_response.h"
 #include "http.h"
 
+enum { num_digit_cnt = 32 };
+
 static int write_str(const char *str, char **buf_pos, int *size_left)
 {
     int write_cnt;
@@ -12,6 +14,7 @@ static int write_str(const char *str, char **buf_pos, int *size_left)
         return 0;
     }
 
+    /* TODO: Rewrite */
     strncpy(*buf_pos, str, *size_left);
 
     /* In case string is truncated */
@@ -30,7 +33,7 @@ static int write_str(const char *str, char **buf_pos, int *size_left)
 
 static int write_num(int val, char **buf_pos, int *size_left)
 {
-    char buf_temp[32];
+    char buf_temp[num_digit_cnt];
     int status;
 
     status = sprintf(buf_temp, "%d", val);
@@ -153,6 +156,13 @@ int http_response_write(const struct http_response *response, char *buf,
     status = write_str("\r\n", &buf_pos, &size_left);
     if(!status) {
         return 0;
+    }
+
+    if(response->content != NULL) {
+        status = write_str(response->content, &buf_pos, &size_left);
+        if(!status) {
+            return 0;
+        }
     }
 
     return buf_size - size_left;

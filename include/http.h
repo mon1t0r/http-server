@@ -47,13 +47,19 @@ enum http_status {
     503
 
 enum http_header_type {
+    http_date,
+    http_server,
     http_content_length,
+    http_content_type,
     http_user_agent,
     http_header_unknown
 };
 
 #define LIST_HTTP_HEADER_TYPE_STRING \
+    "Date",           \
+    "Server",         \
     "Content-Length", \
+    "Content-Type",   \
     "User-Agent"
 
 struct http_version {
@@ -79,6 +85,9 @@ int http_status_code_get(enum http_status status);
 
 void http_add_header(struct http_header_entry **headers,
                      const struct http_header_entry *header_src);
+
+const struct http_header_entry *http_get_header(
+    const struct http_header_entry **headers, enum http_header_type type);
 
 void http_remove_headers(struct http_header_entry **headers);
 
