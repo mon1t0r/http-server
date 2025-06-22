@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "request_handler.h"
-#include "http.h"
+#include "http_request.h"
 #include "http_response.h"
 
 static int handle_get(const struct http_request *request,
@@ -15,12 +15,11 @@ static int handle_get(const struct http_request *request,
     return 1;
 }
 
-void handler_handle_request(const struct http_request *request,
-                            const struct sockaddr_in *addr)
+int handler_handle_request(const struct http_request *request,
+                           const struct sockaddr_in *addr,
+                           struct http_response *response)
 {
-    struct http_response response;
     struct http_header_entry *header;
-    int handle_res;
 
     printf("Received HTTP request: %d %s %d.%d\n",
            request->request_line.method,
@@ -36,19 +35,11 @@ void handler_handle_request(const struct http_request *request,
         header = header->next;
     }
 
-    memset(&response, 0, sizeof(response));
-
     switch(request->request_line.method) {
         case http_get:
-            handle_res = handle_get(request, &response);
+            return handle_get(request, response);
             break;
         default:
-            return;
+            return 0;
     }
-
-    if(!handle_res) {
-        return;
-    }
-
-    /* TODO: Send response */
 }

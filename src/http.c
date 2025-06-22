@@ -32,6 +32,13 @@ enum http_header_type http_header_type_parse(const char *str)
     return index;
 }
 
+const char *http_header_type_str_get(enum http_header_type header_type)
+{
+    static const char *names[] = { LIST_HTTP_HEADER_TYPE_STRING };
+
+    return names[header_type];
+}
+
 const char *http_status_str_get(enum http_status status)
 {
     static const char *names[] = { LIST_HTTP_STATUS_STRING };
@@ -39,11 +46,11 @@ const char *http_status_str_get(enum http_status status)
     return names[status];
 }
 
-const char *http_status_code_str_get(enum http_status status)
+int http_status_code_get(enum http_status status)
 {
-    static const char *names[] = { LIST_HTTP_STATUS_CODE_STRING };
+    static int codes[] = { LIST_HTTP_STATUS_CODE };
 
-    return names[status];
+    return codes[status];
 }
 
 void http_add_header(struct http_header_entry **headers,

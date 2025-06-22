@@ -2,15 +2,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <arpa/inet.h>
 
-#include "str_utils.h"
 #include "worker.h"
-#include "http.h"
+#include "http_request.h"
+#include "http_response.h"
 #include "request_handler.h"
+#include "str_utils.h"
 
-enum {
-    recv_buf_size = 8192
+enum { recv_buf_size = 8192 };
+
+enum recv_status {
+    recv_continue,
+    recv_stop_handle,
+    recv_stop_error
+};
+
+enum send_status {
+    send_ok,
+    send_non_critical,
+    send_fatal_error
 };
 
 static int header_parse(struct http_request *request, char *str)
@@ -33,8 +45,8 @@ static int header_parse(struct http_request *request, char *str)
     return 1;
 }
 
-static int receive_data(struct http_request *request, char *buf,
-                       int buf_len, int *buf_pos)
+static enum recv_status data_receive(struct http_request *request, char *buf,
+                                     int buf_len, int *buf_pos)
 {
     int line_len;
     int parse_res;
@@ -56,26 +68,49 @@ static int receive_data(struct http_request *request, char *buf,
             parse_res = http_request_line_parse(&request->request_line, line);
             if(!parse_res) {
                 /* Request line parsing failed - error */
-                return -1;
+                return recv_stop_error;
             }
             continue;
         }
 
-        /* If CRLFCRLF sequence found - end of the header */
+        /* If CRLFCRLF sequence found - end of the message header */
         if(line_len == 0) {
-            return 1;
+            return recv_stop_handle;
         }
 
         parse_res = header_parse(request, line);
         if(!parse_res) {
-            return -1;
+            return recv_stop_error;
         }
     }
 
     /* More data required */
-    return 0;
+    return recv_continue;
 }
 
+static enum send_status response_send(int conn_fd,
+                                      const struct http_response *response,
+                                      char *buf, int buf_size)
+{
+    int status;
+
+    status = http_response_write(response, buf, buf_size);
+    if(status <= 0) {
+        return send_non_critical;
+    }
+
+    status = send(conn_fd, buf, status, 0);
+    if(status >= 0) {
+        return send_ok;
+    }
+
+    if(errno == EINTR || errno == EMSGSIZE) {
+        return send_non_critical;
+    }
+
+    perror("send()");
+    return send_fatal_error;
+}
 
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
 {
@@ -84,10 +119,13 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     int exit_code;
 
     struct http_request request;
+    struct http_response response;
 
     int buf_pos;
     int data_len;
-    int handle_res;
+    enum recv_status recv_status;
+    enum send_status send_status;
+    int handle_status;
 
     exit_code = EXIT_FAILURE;
 
@@ -99,6 +137,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
     buf_len = buf_pos = 0;
     memset(&request, 0, sizeof(request));
+    memset(&response, 0, sizeof(response));
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
@@ -113,26 +152,31 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         buf_len += data_len;
 
-        handle_res = receive_data(&request, buf, buf_len, &buf_pos);
+        recv_status = data_receive(&request, buf, buf_len, &buf_pos);
 
         /*
-         * handle_res == 0  : continue receiving data
-         * handle_res == 1  : stop receiving and attempt to handle request
-         * handle_res == -1 : stop receiving wihtout attempting to handle
-         *
          * Continue receiving only when there is space in buffer left
          */
-        if(handle_res == 0 && buf_len < recv_buf_size) {
+        if(recv_status == recv_continue && buf_len < recv_buf_size) {
             continue;
         }
 
-        if(handle_res > 0) {
-            handler_handle_request(&request, addr);
+        if(recv_status == recv_stop_handle) {
+            handle_status = handler_handle_request(&request, addr, &response);
+            if(handle_status) {
+                send_status = response_send(conn_fd, &response, buf,
+                                            recv_buf_size);
+                if(send_status == send_fatal_error) {
+                    goto exit;
+                }
+            }
         }
 
         buf_len = buf_pos = 0;
         http_remove_headers(&request.headers);
+        http_remove_headers(&response.headers);
         memset(&request, 0, sizeof(request));
+        memset(&response, 0, sizeof(response));
     }
 
 exit:

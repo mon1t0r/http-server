@@ -15,7 +15,7 @@ struct http_response {
     const char *content;
 };
 
-void http_response_write(const struct http_response *response, char *buf,
-                         int buf_size);
+int http_response_write(const struct http_response *response, char *buf,
+                        int buf_size);
 
 #endif

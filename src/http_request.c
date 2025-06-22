@@ -42,8 +42,8 @@ int http_request_line_parse(struct http_request_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->version.major = parse_uint(token);
-    if(request_line->version.major < 0) {
+    request_line->version.minor = parse_uint(token);
+    if(request_line->version.minor < 0) {
         return 0;
     }
 

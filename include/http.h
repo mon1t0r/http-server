@@ -39,12 +39,12 @@ enum http_status {
     "Not Found",          \
     "Service Unavailable" \
 
-#define LIST_HTTP_STATUS_CODE_STRING \
-    "200", \
-    "400", \
-    "403", \
-    "404", \
-    "503"
+#define LIST_HTTP_STATUS_CODE \
+    200, \
+    400, \
+    403, \
+    404, \
+    503
 
 enum http_header_type {
     http_content_length,
@@ -71,9 +71,11 @@ enum http_method http_method_parse(const char *str);
 
 enum http_header_type http_header_type_parse(const char *str);
 
+const char *http_header_type_str_get(enum http_header_type header_type);
+
 const char *http_status_str_get(enum http_status status);
 
-const char *http_status_code_str_get(enum http_status status);
+int http_status_code_get(enum http_status status);
 
 void http_add_header(struct http_header_entry **headers,
                      const struct http_header_entry *header_src);
