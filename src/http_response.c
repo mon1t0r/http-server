@@ -8,25 +8,21 @@ enum { num_digit_cnt = 32 };
 
 static int write_str(const char *str, char **buf_pos, int *size_left)
 {
-    int write_cnt;
+    size_t len;
 
     if(*size_left <= 0) {
         return 0;
     }
 
-    /* TODO: Rewrite */
-    strncpy(*buf_pos, str, *size_left);
-
-    /* In case string is truncated */
-    (*buf_pos)[*size_left - 1] = '\0';
-
-    write_cnt = strlen(*buf_pos);
-    if(write_cnt <= 0) {
+    len = strlen(str);
+    if(*size_left < len) {
         return 0;
     }
 
-    *buf_pos += write_cnt;
-    *size_left -= write_cnt;
+    memcpy(*buf_pos, str, len);
+
+    *buf_pos += len;
+    *size_left -= len;
 
     return 1;
 }
