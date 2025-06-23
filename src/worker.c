@@ -166,7 +166,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
             continue;
         }
 
-        handle_status = handler_handle_request(&request, addr, &response);
+        handle_status = handler_response_create(&response, &request, addr);
         if(handle_status) {
             send_status = response_send(conn_fd, &response, buf,
                                         recv_buf_size);
@@ -177,8 +177,8 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         buf_len = buf_pos = 0;
         http_remove_headers(&request.headers);
-        http_remove_headers(&response.headers);
         memset(&request, 0, sizeof(request));
+        handler_response_free(&response);
         memset(&response, 0, sizeof(response));
     }
 

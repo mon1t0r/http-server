@@ -22,7 +22,6 @@ int find_crlf(const char *str, int len)
     return -1;
 }
 
-
 int parse_uint(const char *str)
 {
     long res;

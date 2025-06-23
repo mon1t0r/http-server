@@ -4,7 +4,7 @@
 #include "http_response.h"
 #include "http.h"
 
-enum { num_digit_cnt = 32 };
+enum { int_buf_size = 32 };
 
 static int write_str(const char *str, char **buf_pos, int *size_left)
 {
@@ -29,7 +29,7 @@ static int write_str(const char *str, char **buf_pos, int *size_left)
 
 static int write_num(int val, char **buf_pos, int *size_left)
 {
-    char buf_temp[num_digit_cnt];
+    char buf_temp[int_buf_size];
     int status;
 
     status = sprintf(buf_temp, "%d", val);

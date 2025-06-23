@@ -5,14 +5,14 @@
 
 struct http_request_line {
     enum http_method method;
-    const char *request_uri;
+    char *request_uri;
     struct http_version version;
 };
 
 struct http_request {
     struct http_request_line request_line;
     struct http_header_entry *headers;
-    const char *content;
+    char *content;
 };
 
 int http_request_line_parse(struct http_request_line *request_line, char *str);

@@ -69,7 +69,7 @@ struct http_version {
 
 struct http_header_entry {
     enum http_header_type type;
-    const char *value;
+    char *value;
     struct http_header_entry *next;
 };
 

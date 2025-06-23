@@ -6,8 +6,10 @@
 #include "http_request.h"
 #include "http_response.h"
 
-int handler_handle_request(const struct http_request *request,
-                           const struct sockaddr_in *addr,
-                           struct http_response *response);
+int handler_response_create(struct http_response *response,
+                            const struct http_request *request,
+                            const struct sockaddr_in *addr);
+
+void handler_response_free(struct http_response *response);
 
 #endif
