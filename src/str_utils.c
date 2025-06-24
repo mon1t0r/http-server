@@ -5,21 +5,31 @@
 
 #include "str_utils.h"
 
-int find_crlf(const char *str, int len)
+static int str_find_dchar(const char *haystack, int len, const char needle[2])
 {
     int i;
 
     for(i = 1; i < len - 1; i += 2) {
-        if(str[i] == '\r' && str[i + 1] == '\n') {
+        if(haystack[i] == needle[0] && haystack[i + 1] == needle[1]) {
             return i;
         }
 
-        if(str[i] == '\n' && str[i - 1] == '\r') {
+        if(haystack[i] == needle[1] && haystack[i - 1] == needle[0]) {
             return i - 1;
         }
     }
 
     return -1;
+}
+
+int str_find_crlf(const char *buf, int len)
+{
+    return str_find_dchar(buf, len, "\r\n");
+}
+
+int str_find_ddot(const char *buf, int len)
+{
+    return str_find_dchar(buf, len, "..");
 }
 
 int parse_uint(const char *str)
@@ -43,7 +53,7 @@ int parse_uint(const char *str)
     return res;
 }
 
-int find_str(const char * const *arr, int arr_len, const char *str)
+int str_arr_find(const char * const *arr, int arr_len, const char *str)
 {
     int i;
 

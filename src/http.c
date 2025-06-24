@@ -10,7 +10,7 @@ enum http_method http_method_parse(const char *str)
 
     int index;
 
-    index = find_str(names, sizeof(names) / sizeof(names[0]), str);
+    index = str_arr_find(names, sizeof(names) / sizeof(names[0]), str);
     if(index < 0) {
         return http_method_extension;
     }
@@ -24,7 +24,7 @@ enum http_header_type http_header_type_parse(const char *str)
 
     int index;
 
-    index = find_str(names, sizeof(names) / sizeof(names[0]), str);
+    index = str_arr_find(names, sizeof(names) / sizeof(names[0]), str);
     if(index < 0) {
         return http_header_unknown;
     }

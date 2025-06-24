@@ -55,7 +55,7 @@ static enum recv_status data_receive(struct http_request *request, char *buf,
     /* TODO: Receive request content */
 
     for(;;) {
-        line_len = find_crlf(buf + *buf_pos, buf_len);
+        line_len = str_find_crlf(buf + *buf_pos, buf_len);
         if(line_len < 0) {
             break;
         }
@@ -139,7 +139,6 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
     buf_len = buf_pos = 0;
     memset(&request, 0, sizeof(request));
-    memset(&response, 0, sizeof(response));
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
@@ -179,7 +178,6 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         http_remove_headers(&request.headers);
         memset(&request, 0, sizeof(request));
         handler_response_free(&response);
-        memset(&response, 0, sizeof(response));
     }
 
 exit:

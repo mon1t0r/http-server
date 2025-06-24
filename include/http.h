@@ -33,18 +33,18 @@ enum http_status {
 };
 
 #define LIST_HTTP_STATUS_STRING \
+    "Service Unavailable" \
     "OK",                 \
     "Bad Request",        \
     "Forbidden",          \
-    "Not Found",          \
-    "Service Unavailable" \
+    "Not Found"
 
 #define LIST_HTTP_STATUS_CODE \
+    503, \
     200, \
     400, \
     403, \
-    404, \
-    503
+    404
 
 enum http_header_type {
     http_date,
