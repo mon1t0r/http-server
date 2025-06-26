@@ -6,7 +6,7 @@
 
 enum http_method http_method_parse(const char *str)
 {
-    static const char *names[] = { LIST_HTTP_METHOD_STRING };
+    static const char *names[] = { ENUM_HTTP_METHOD(ENUM_TYPE_VAL2) };
 
     int index;
 
@@ -20,7 +20,7 @@ enum http_method http_method_parse(const char *str)
 
 enum http_header_type http_header_type_parse(const char *str)
 {
-    static const char *names[] = { LIST_HTTP_HEADER_TYPE_STRING };
+    static const char *names[] = { ENUM_HTTP_HEADER_TYPE(ENUM_TYPE_VAL2) };
 
     int index;
 
@@ -34,21 +34,21 @@ enum http_header_type http_header_type_parse(const char *str)
 
 const char *http_header_type_str_get(enum http_header_type header_type)
 {
-    static const char *names[] = { LIST_HTTP_HEADER_TYPE_STRING };
+    static const char *names[] = { ENUM_HTTP_HEADER_TYPE(ENUM_TYPE_VAL2) };
 
     return names[header_type];
 }
 
 const char *http_status_str_get(enum http_status status)
 {
-    static const char *names[] = { LIST_HTTP_STATUS_STRING };
+    static const char *names[] = { ENUM_HTTP_STATUS(ENUM_TYPE_VAL3) };
 
     return names[status];
 }
 
 int http_status_code_get(enum http_status status)
 {
-    static int codes[] = { LIST_HTTP_STATUS_CODE };
+    static int codes[] = { ENUM_HTTP_STATUS(ENUM_TYPE_VAL2) };
 
     return codes[status];
 }

@@ -1,66 +1,46 @@
 #ifndef HTTP_SERVER_HTTP_H
 #define HTTP_SERVER_HTTP_H
 
-enum http_method {
-    http_get,
-    http_head,
-    http_post,
-    http_put,
-    http_delete,
-    http_connect,
-    http_options,
-    http_trace,
-    http_method_extension
-};
+#include "enum_def.h"
 
-#define LIST_HTTP_METHOD_STRING \
-    "GET",     \
-    "HEAD",    \
-    "POST",    \
-    "PUT",     \
-    "DELETE",  \
-    "CONNECT", \
-    "OPTIONS", \
-    "TRACE"
+#define ENUM_HTTP_METHOD(type) \
+    ENUM_VALUE2(type, http_get,              "GET"     ), \
+    ENUM_VALUE2(type, http_head,             "HEAD"    ), \
+    ENUM_VALUE2(type, http_post,             "POST"    ), \
+    ENUM_VALUE2(type, http_put,              "PUT"     ), \
+    ENUM_VALUE2(type, http_delete,           "DELETE"  ), \
+    ENUM_VALUE2(type, http_connect,          "CONNECT" ), \
+    ENUM_VALUE2(type, http_options,          "OPTIONS" ), \
+    ENUM_VALUE2(type, http_trace,            "TRACE"   ), \
+    ENUM_VALUE2(type, http_method_extension, ""        )
+
+#define ENUM_HTTP_STATUS(type) \
+    ENUM_VALUE3(type, http_service_unavailable, 503, "Service Unavailable" ), \
+    ENUM_VALUE3(type, http_ok,                  200, "OK"                  ), \
+    ENUM_VALUE3(type, http_bad_request,         400, "Bad Request"         ), \
+    ENUM_VALUE3(type, http_forbidden,           403, "Forbidden"           ), \
+    ENUM_VALUE3(type, http_not_found,           404, "Not Found"           ), \
+    ENUM_VALUE3(type, http_status_extension,    0,   ""                    )
+
+#define ENUM_HTTP_HEADER_TYPE(type) \
+    ENUM_VALUE2(type, http_date,           "Date"           ), \
+    ENUM_VALUE2(type, http_server,         "Server"         ), \
+    ENUM_VALUE2(type, http_content_length, "Content-Length" ), \
+    ENUM_VALUE2(type, http_content_type,   "Content-Type"   ), \
+    ENUM_VALUE2(type, http_user_agent,     "User-Agent"     ), \
+    ENUM_VALUE2(type, http_header_unknown, ""               )
+
+enum http_method {
+    ENUM_HTTP_METHOD(ENUM_TYPE_VAL1)
+};
 
 enum http_status {
-    http_service_unavailable,
-    http_ok,
-    http_bad_request,
-    http_forbidden,
-    http_not_found,
-    http_status_extension
+    ENUM_HTTP_STATUS(ENUM_TYPE_VAL1)
 };
-
-#define LIST_HTTP_STATUS_STRING \
-    "Service Unavailable" \
-    "OK",                 \
-    "Bad Request",        \
-    "Forbidden",          \
-    "Not Found"
-
-#define LIST_HTTP_STATUS_CODE \
-    503, \
-    200, \
-    400, \
-    403, \
-    404
 
 enum http_header_type {
-    http_date,
-    http_server,
-    http_content_length,
-    http_content_type,
-    http_user_agent,
-    http_header_unknown
+    ENUM_HTTP_HEADER_TYPE(ENUM_TYPE_VAL1)
 };
-
-#define LIST_HTTP_HEADER_TYPE_STRING \
-    "Date",           \
-    "Server",         \
-    "Content-Length", \
-    "Content-Type",   \
-    "User-Agent"
 
 struct http_version {
     int major;
