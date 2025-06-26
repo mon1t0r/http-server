@@ -15,11 +15,12 @@
     ENUM_VALUE2(type, http_method_extension, ""        )
 
 #define ENUM_HTTP_STATUS(type) \
-    ENUM_VALUE3(type, http_service_unavailable, 503, "Service Unavailable" ), \
     ENUM_VALUE3(type, http_ok,                  200, "OK"                  ), \
     ENUM_VALUE3(type, http_bad_request,         400, "Bad Request"         ), \
     ENUM_VALUE3(type, http_forbidden,           403, "Forbidden"           ), \
     ENUM_VALUE3(type, http_not_found,           404, "Not Found"           ), \
+    ENUM_VALUE3(type, http_internal_error,      500, "Internal Server Error"),\
+    ENUM_VALUE3(type, http_service_unavailable, 503, "Service Unavailable" ), \
     ENUM_VALUE3(type, http_status_extension,    0,   ""                    )
 
 #define ENUM_HTTP_HEADER_TYPE(type) \

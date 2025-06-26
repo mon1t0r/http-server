@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -102,11 +104,15 @@ static void response_header_length_create(struct http_header_entry *header,
     header->value = buf;
 }
 
-static char *response_content_create(const struct http_request *request)
+static enum http_status response_content_create(
+    const struct http_request *request, char **buf_ptr)
 {
     char path_buf[path_buf_size];
     int path_len;
     int uri_len;
+
+    struct stat s;
+    int stat_res;
 
     char *buf;
     int fd;
@@ -117,24 +123,35 @@ static char *response_content_create(const struct http_request *request)
     uri_len = strlen(request->request_line.request_uri);
 
     if(path_len + uri_len >= path_buf_size) {
-        return NULL;
+        return http_internal_error;
     }
 
     /* Do not allow to go up in file tree */
     if(str_find_ddot(request->request_line.request_uri, uri_len) >= 0) {
-        return NULL;
+        return http_bad_request;
     }
 
     sprintf(path_buf, "%s%s", CONTENT_PATH, request->request_line.request_uri);
 
+    stat_res = stat(path_buf, &s);
+    if(stat_res < 0) {
+        return http_internal_error;
+    }
+    if(S_ISDIR(s.st_mode)) {
+        return http_not_found;
+    }
+
     fd = open(path_buf, O_RDONLY);
     if(fd < 0) {
-        return NULL;
+        if(errno == EACCES) {
+            return http_not_found;
+        }
+        return http_internal_error;
     }
 
     file_len = file_get_length(fd);
     if(file_len < 0) {
-        return NULL;
+        return http_internal_error;
     }
 
     /* +1 byte for terminator */
@@ -144,25 +161,27 @@ static char *response_content_create(const struct http_request *request)
     if(read_len != file_len) {
         free(buf);
         close(fd);
-        return NULL;
+        return http_internal_error;
     }
     buf[file_len] = '\0';
 
     close(fd);
 
-    return buf;
+    *buf_ptr = buf;
+    return http_ok;
 }
 
 static int response_create_get(struct http_response *response,
                                const struct http_request *request)
 {
     struct http_header_entry header;
+    enum http_status status;
 
     response_setup(response);
 
-    response->content = response_content_create(request);
-    if(response->content == NULL) {
-        response_set_status(response, http_not_found);
+    status = response_content_create(request, &response->content);
+    if(status != http_ok) {
+        response_set_status(response, status);
         return 1;
     }
 
