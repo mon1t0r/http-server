@@ -24,11 +24,11 @@ enum http_method {
     "TRACE"
 
 enum http_status {
+    http_service_unavailable,
     http_ok,
     http_bad_request,
     http_forbidden,
     http_not_found,
-    http_service_unavailable,
     http_status_extension
 };
 
