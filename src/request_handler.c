@@ -197,6 +197,21 @@ static int response_create_get(struct http_response *response,
     return 1;
 }
 
+static int response_create_head(struct http_response *response,
+                                const struct http_request *request)
+{
+    int status;
+
+    status = response_create_get(response, request);
+
+    if(response->content != NULL) {
+        free(response->content);
+        response->content = NULL;
+    }
+
+    return status;
+}
+
 int handler_response_create(struct http_response *response,
                             const struct http_request *request,
                             const struct sockaddr_in *addr)
@@ -204,7 +219,8 @@ int handler_response_create(struct http_response *response,
     switch(request->request_line.method) {
         case http_get:
             return response_create_get(response, request);
-            break;
+        case http_head:
+            return response_create_head(response, request);
         default:
             return 0;
     }
