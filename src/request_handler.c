@@ -140,6 +140,14 @@ res_cont_creat(char **buf_ptr, int *buf_len_ptr, const char *uri)
     return http_ok;
 }
 
+static void res_cont_free(char **buf_ptr)
+{
+    if(*buf_ptr != NULL) {
+        free(*buf_ptr);
+        *buf_ptr = NULL;
+    }
+}
+
 static void res_setup(struct http_response *response)
 {
     struct http_header_entry header;
@@ -165,8 +173,8 @@ static void res_set_status(struct http_response *response,
     response->status_line.reason = (char *) http_status_str_get(status);
 }
 
-static void res_hdr_len_creat(struct http_header_entry *header,
-                              int content_len)
+static void
+res_hdr_cont_len_creat(struct http_header_entry *header, int content_len)
 {
     char *buf;
 
@@ -210,26 +218,33 @@ static int res_creat_get(struct http_response *response,
     struct http_header_entry header;
     enum http_status status;
 
+    /* Setup */
     res_setup(response);
 
-    status = res_hdr_cont_t_creat(&header,
-                                        request->request_line.request_uri);
+    /* Create content */
+    status = res_cont_creat(&response->content,
+                            &response->content_len,
+                            request->request_line.request_uri);
     if(status != http_ok) {
+        res_set_status(response, status);
+        return 1;
+    }
+
+    /* Create Content-Type header */
+    status = res_hdr_cont_t_creat(&header, request->request_line.request_uri);
+    if(status != http_ok) {
+        res_cont_free(&response->content);
         res_set_status(response, status);
         return 1;
     }
     http_add_header(&response->headers, &header);
 
-    status = res_cont_creat(&response->content,
-                                     &response->content_len,
-                                     request->request_line.request_uri);
-    res_set_status(response, status);
-    if(status != http_ok) {
-        return 1;
-    }
-
-    res_hdr_len_creat(&header, response->content_len);
+    /* Create Content-Length header */
+    res_hdr_cont_len_creat(&header, response->content_len);
     http_add_header(&response->headers, &header);
+
+    /* Set response status */
+    res_set_status(response, http_ok);
 
     return 1;
 }
@@ -241,12 +256,18 @@ static int res_creat_head(struct http_response *response,
 
     status = res_creat_get(response, request);
 
-    if(response->content != NULL) {
-        free(response->content);
-        response->content = NULL;
-    }
+    res_cont_free(&response->content);
 
     return status;
+}
+
+static int res_creat_default(struct http_response *response)
+{
+    res_setup(response);
+
+    res_set_status(response, http_not_implemented);
+
+    return 1;
 }
 
 int handler_response_create(struct http_response *response,
@@ -267,7 +288,7 @@ int handler_response_create(struct http_response *response,
         case http_head:
             return res_creat_head(response, request);
         default:
-            return 0;
+            return res_creat_default(response);
     }
 }
 
@@ -285,7 +306,5 @@ void handler_response_free(struct http_response *response)
 
     http_remove_headers(&response->headers);
 
-    if(response->content != NULL) {
-        free(response->content);
-    }
+    res_cont_free(&response->content);
 }

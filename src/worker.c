@@ -94,7 +94,7 @@ static enum send_status
 res_send(int conn_fd, const struct http_response *response, char *buf,
          int buf_size)
 {
-    int status;
+    size_t status;
 
     status = http_response_write(response, buf, buf_size);
     if(status <= 0) {
@@ -104,10 +104,6 @@ res_send(int conn_fd, const struct http_response *response, char *buf,
     status = send(conn_fd, buf, status, 0);
     if(status >= 0) {
         return send_ok;
-    }
-
-    if(errno == EINTR || errno == EMSGSIZE) {
-        return send_non_critical;
     }
 
     perror("send()");

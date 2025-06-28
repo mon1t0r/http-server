@@ -13,6 +13,7 @@ struct http_request {
     struct http_request_line request_line;
     struct http_header_entry *headers;
     char *content;
+    int content_len;
 };
 
 int http_request_line_parse(struct http_request_line *request_line, char *str);
