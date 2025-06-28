@@ -19,17 +19,17 @@
 #define CONTENT_PATH "./html"
 
 enum {
-    int_buf_size = 32,
+    int_buf_size  = 32,
     path_buf_size = 150,
-    response_version_major = 1,
-    response_version_minor = 1
+    res_ver_major = 1,
+    res_ver_minor = 1
 };
 
 static char *time_get_str(void)
 {
     time_t time_cur;
     char *str;
-    int len;
+    size_t len;
 
     time_cur = time(NULL);
 
@@ -47,7 +47,7 @@ static char *time_get_str(void)
     return str;
 }
 
-static off_t file_get_length(int fd)
+static off_t file_get_len(int fd)
 {
     off_t length, res;
 
@@ -65,11 +65,11 @@ static off_t file_get_length(int fd)
 }
 
 static enum http_status
-response_content_create(char **buf_ptr, int *buf_len_ptr, const char *uri)
+res_cont_creat(char **buf_ptr, int *buf_len_ptr, const char *uri)
 {
     char path_buf[path_buf_size];
-    int path_len;
-    int uri_len;
+    size_t path_len;
+    size_t uri_len;
 
     struct stat s;
     int stat_res;
@@ -118,7 +118,7 @@ response_content_create(char **buf_ptr, int *buf_len_ptr, const char *uri)
         return http_internal_error;
     }
 
-    file_len = file_get_length(fd);
+    file_len = file_get_len(fd);
     if(file_len < 0) {
         return http_internal_error;
     }
@@ -140,14 +140,14 @@ response_content_create(char **buf_ptr, int *buf_len_ptr, const char *uri)
     return http_ok;
 }
 
-static void response_setup(struct http_response *response)
+static void res_setup(struct http_response *response)
 {
     struct http_header_entry header;
 
     memset(response, 0, sizeof(*response));
 
-    response->status_line.version.major = response_version_major;
-    response->status_line.version.minor = response_version_minor;
+    response->status_line.version.major = res_ver_major;
+    response->status_line.version.minor = res_ver_minor;
 
     header.type = http_date;
     header.value = time_get_str();
@@ -158,15 +158,15 @@ static void response_setup(struct http_response *response)
     http_add_header(&response->headers, &header);
 }
 
-static void response_set_status(struct http_response *response,
-                                enum http_status status)
+static void res_set_status(struct http_response *response,
+                           enum http_status status)
 {
     response->status_line.status = status;
     response->status_line.reason = (char *) http_status_str_get(status);
 }
 
-static void response_header_length_create(struct http_header_entry *header,
-                                          int content_len)
+static void res_hdr_len_creat(struct http_header_entry *header,
+                              int content_len)
 {
     char *buf;
 
@@ -179,17 +179,12 @@ static void response_header_length_create(struct http_header_entry *header,
 }
 
 static enum http_status
-response_header_content_type_create(struct http_header_entry *header,
-                                    const char *uri)
+res_hdr_cont_t_creat(struct http_header_entry *header, const char *uri)
 {
-    static const char *exts[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL1) };
-    static const char *types[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL2) };
-
     char path_buf[path_buf_size];
-    int uri_len;
+    size_t uri_len;
     const char *filename;
-    const char *fileext;
-    int index;
+    const char *file_ext;
 
     header->type = http_content_type;
 
@@ -201,59 +196,50 @@ response_header_content_type_create(struct http_header_entry *header,
     strcpy(path_buf, uri);
 
     filename = basename(path_buf);
-    fileext = strrchr(filename, '.');
-    if(fileext == NULL || fileext == filename) {
-        header->value = "text/plain";
-        return http_ok;
-    }
+    file_ext = strrchr(filename, '.');
 
-    index = str_arr_find(exts, sizeof(exts) / sizeof(exts[0]), fileext + 1);
-    if(index < 0) {
-        index = 0;
-    }
-
-    /* header->value will not be modified */
-    header->value = (char *) types[index];
+    /* header->value will not be modified for this header */
+    header->value = (char *) http_cont_type_str_get(file_ext);
 
     return http_ok;
 }
 
-static int response_create_get(struct http_response *response,
-                               const struct http_request *request)
+static int res_creat_get(struct http_response *response,
+                         const struct http_request *request)
 {
     struct http_header_entry header;
     enum http_status status;
 
-    response_setup(response);
+    res_setup(response);
 
-    status = response_header_content_type_create(&header,
+    status = res_hdr_cont_t_creat(&header,
                                         request->request_line.request_uri);
     if(status != http_ok) {
-        response_set_status(response, status);
+        res_set_status(response, status);
         return 1;
     }
     http_add_header(&response->headers, &header);
 
-    status = response_content_create(&response->content,
+    status = res_cont_creat(&response->content,
                                      &response->content_len,
                                      request->request_line.request_uri);
-    response_set_status(response, status);
+    res_set_status(response, status);
     if(status != http_ok) {
         return 1;
     }
 
-    response_header_length_create(&header, response->content_len);
+    res_hdr_len_creat(&header, response->content_len);
     http_add_header(&response->headers, &header);
 
     return 1;
 }
 
-static int response_create_head(struct http_response *response,
-                                const struct http_request *request)
+static int res_creat_head(struct http_response *response,
+                          const struct http_request *request)
 {
     int status;
 
-    status = response_create_get(response, request);
+    status = res_creat_get(response, request);
 
     if(response->content != NULL) {
         free(response->content);
@@ -270,16 +256,16 @@ int handler_response_create(struct http_response *response,
     /* Only HTTP/1.1 is supported */
     if(request->request_line.version.major != 1 ||
         request->request_line.version.minor != 1) {
-        response_setup(response);
-        response_set_status(response, http_version_unsupported);
+        res_setup(response);
+        res_set_status(response, http_version_unsupported);
         return 1;
     }
 
     switch(request->request_line.method) {
         case http_get:
-            return response_create_get(response, request);
+            return res_creat_get(response, request);
         case http_head:
-            return response_create_head(response, request);
+            return res_creat_head(response, request);
         default:
             return 0;
     }

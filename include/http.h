@@ -74,6 +74,8 @@ const char *http_status_str_get(enum http_status status);
 
 int http_status_code_get(enum http_status status);
 
+const char *http_cont_type_str_get(const char *file_ext);
+
 void http_add_header(struct http_header_entry **headers,
                      const struct http_header_entry *header_src);
 

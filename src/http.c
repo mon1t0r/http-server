@@ -53,6 +53,26 @@ int http_status_code_get(enum http_status status)
     return codes[status];
 }
 
+const char *http_cont_type_str_get(const char *file_ext)
+{
+    static const char *exts[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL1) };
+    static const char *types[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL2) };
+
+    int index;
+
+    if(file_ext == NULL || file_ext[0] != '.') {
+        return types[0];
+    }
+
+    /* file_ext + 1 to omit period (.html -> html)*/
+    index = str_arr_find(exts, sizeof(exts) / sizeof(exts[0]), file_ext + 1);
+    if(index < 0) {
+        return types[0];
+    }
+
+    return types[index];
+}
+
 void http_add_header(struct http_header_entry **headers,
                      const struct http_header_entry *header_src)
 {
@@ -80,8 +100,9 @@ void http_add_header(struct http_header_entry **headers,
     header_temp->next = header;
 }
 
-const struct http_header_entry *http_get_header(
-    const struct http_header_entry **headers, enum http_header_type type)
+const struct http_header_entry *
+http_get_header(const struct http_header_entry **headers,
+                enum http_header_type type)
 {
     const struct http_header_entry *header;
 

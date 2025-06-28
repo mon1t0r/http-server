@@ -41,7 +41,7 @@ static int set_sigaction(void)
     return res;
 }
 
-static int socket_create(void)
+static int sock_creat(void)
 {
     int sock_fd;
 
@@ -53,7 +53,7 @@ static int socket_create(void)
     return sock_fd;
 }
 
-static int socket_set_reuseaddr(int sock_fd)
+static int sock_set_opt(int sock_fd)
 {
     int val;
 
@@ -66,7 +66,7 @@ static int socket_set_reuseaddr(int sock_fd)
     return val;
 }
 
-static int socket_bind(int sock_fd) {
+static int sock_bind(int sock_fd) {
     struct sockaddr_in sock_addr;
     int res;
 
@@ -83,7 +83,7 @@ static int socket_bind(int sock_fd) {
     return res;
 }
 
-static int socket_listen(int sock_fd)
+static int sock_listen(int sock_fd)
 {
     int res;
 
@@ -104,22 +104,22 @@ int main(void)
     socklen_t conn_addr_len;
     int worker_pid;
 
-    sock_fd = socket_create();
+    sock_fd = sock_creat();
     if(sock_fd < 0) {
         exit(EXIT_FAILURE);
     }
 
-    res = socket_set_reuseaddr(sock_fd);
+    res = sock_set_opt(sock_fd);
     if(res < 0) {
         goto exit;
     }
 
-    res = socket_bind(sock_fd);
+    res = sock_bind(sock_fd);
     if(res < 0) {
         goto exit;
     }
 
-    res = socket_listen(sock_fd);
+    res = sock_listen(sock_fd);
     if(res < 0) {
         goto exit;
     }

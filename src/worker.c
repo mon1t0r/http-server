@@ -25,7 +25,7 @@ enum send_status {
     send_fatal_error
 };
 
-static int header_parse(struct http_request *request, char *str)
+static int hdr_parse(struct http_request *request, char *str)
 {
     struct http_header_entry header;
     int parse_res;
@@ -45,8 +45,8 @@ static int header_parse(struct http_request *request, char *str)
     return 1;
 }
 
-static enum recv_status data_receive(struct http_request *request, char *buf,
-                                     int buf_len, int *buf_pos)
+static enum recv_status
+data_recv(struct http_request *request, char *buf, int buf_len, int *buf_pos)
 {
     int line_len;
     int parse_res;
@@ -80,7 +80,7 @@ static enum recv_status data_receive(struct http_request *request, char *buf,
             return recv_stop_handle;
         }
 
-        parse_res = header_parse(request, line);
+        parse_res = hdr_parse(request, line);
         if(!parse_res) {
             return recv_stop_error;
         }
@@ -90,9 +90,9 @@ static enum recv_status data_receive(struct http_request *request, char *buf,
     return recv_continue;
 }
 
-static enum send_status response_send(int conn_fd,
-                                      const struct http_response *response,
-                                      char *buf, int buf_size)
+static enum send_status
+res_send(int conn_fd, const struct http_response *response, char *buf,
+         int buf_size)
 {
     int status;
 
@@ -117,14 +117,14 @@ static enum send_status response_send(int conn_fd,
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
 {
     char *buf;
-    int buf_len;
     int exit_code;
 
     struct http_request request;
     struct http_response response;
 
     int buf_pos;
-    int data_len;
+    int buf_len;
+    ssize_t data_len;
     enum recv_status recv_status;
     enum send_status send_status;
     int handle_status;
@@ -153,7 +153,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         buf_len += data_len;
 
-        recv_status = data_receive(&request, buf, buf_len, &buf_pos);
+        recv_status = data_recv(&request, buf, buf_len, &buf_pos);
         if(recv_status == recv_stop_error) {
             goto exit;
         }
@@ -167,16 +167,19 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         handle_status = handler_response_create(&response, &request, addr);
         if(handle_status) {
-            send_status = response_send(conn_fd, &response, buf,
-                                        recv_buf_size);
+            send_status = res_send(conn_fd, &response, buf, recv_buf_size);
             if(send_status == send_fatal_error) {
                 goto exit;
             }
         }
 
         buf_len = buf_pos = 0;
+
+        /* Reset request */
         http_remove_headers(&request.headers);
         memset(&request, 0, sizeof(request));
+
+        /* Free response */
         handler_response_free(&response);
     }
 

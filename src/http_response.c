@@ -6,8 +6,8 @@
 
 enum { int_buf_size = 32 };
 
-static int write_buf(const char *buf, size_t len, char **buf_pos,
-                     int *size_left)
+static int
+write_buf(const char *buf, size_t len, char **buf_pos, int *size_left)
 {
     if(*size_left <= 0) {
         return 0;
@@ -43,8 +43,9 @@ static int write_num(int val, char **buf_pos, int *size_left)
     return write_str(buf_temp, buf_pos, size_left);
 }
 
-static int write_status_line(const struct http_status_line *status_line,
-                             char **buf_pos, int *size_left)
+static int
+write_status(const struct http_status_line *status_line, char **buf_pos,
+             int *size_left)
 {
     int status;
 
@@ -97,8 +98,9 @@ static int write_status_line(const struct http_status_line *status_line,
     return 1;
 }
 
-static int write_header(const struct http_header_entry *header,
-                        char **buf_pos, int *size_left)
+static int
+write_hdr(const struct http_header_entry *header, char **buf_pos,
+          int *size_left)
 {
     int status;
 
@@ -137,14 +139,14 @@ int http_response_write(const struct http_response *response, char *buf,
     buf_pos = buf;
     size_left = buf_size;
 
-    status = write_status_line(&response->status_line, &buf_pos, &size_left);
+    status = write_status(&response->status_line, &buf_pos, &size_left);
     if(!status) {
         return 0;
     }
 
     header = response->headers;
     while(header != NULL) {
-        status = write_header(header, &buf_pos, &size_left);
+        status = write_hdr(header, &buf_pos, &size_left);
         if(!status) {
             return 0;
         }
