@@ -10,7 +10,7 @@
 #include "request_handler.h"
 #include "str_utils.h"
 
-enum { recv_buf_size = 8192 };
+enum { buf_size = 8192 };
 
 enum recv_status {
     recv_continue,
@@ -95,6 +95,8 @@ res_send(int conn_fd, const struct http_response *response, char *buf,
 {
     size_t status;
 
+    /* TODO: Send content partially, do not load all in buffer */
+
     status = http_response_write(response, buf, buf_size);
     if(status <= 0) {
         return send_non_critical;
@@ -126,7 +128,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
     exit_code = EXIT_FAILURE;
 
-    buf = malloc(recv_buf_size);
+    buf = malloc(buf_size);
     if(!buf) {
         perror("malloc()");
         goto exit;
@@ -136,7 +138,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     memset(&request, 0, sizeof(request));
 
     for(;;) {
-        data_len = recv(conn_fd, buf + buf_len, recv_buf_size - buf_len, 0);
+        data_len = recv(conn_fd, buf + buf_len, buf_size - buf_len, 0);
         if(data_len < 0) {
             perror("recv()");
             goto exit;
@@ -156,12 +158,12 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         /*
          * Continue receiving only when there is space in buffer left
          */
-        if(recv_status == recv_continue && buf_len < recv_buf_size) {
+        if(recv_status == recv_continue && buf_len < buf_size) {
             continue;
         }
 
         handle_status = handler_response_create(&response, &request, addr);
-        send_status = res_send(conn_fd, &response, buf, recv_buf_size);
+        send_status = res_send(conn_fd, &response, buf, buf_size);
 
         /* Close connection if handler returned 0, or send error occured */
         if(!handle_status || send_status == send_fatal_error) {

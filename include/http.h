@@ -38,8 +38,18 @@
 #define ENUM_HTTP_CONTENT_TYPE(type) \
     ENUM_VALUE2(type, "",     "text/plain"   ), \
     ENUM_VALUE2(type, "html", "text/html"    ), \
+    ENUM_VALUE2(type, "xml",  "text/xml"     ), \
     ENUM_VALUE2(type, "png",  "image/png"    ), \
-    ENUM_VALUE2(type, "ico",  "image/x-icon" )
+    ENUM_VALUE2(type, "jpg",  "image/jpeg"   ), \
+    ENUM_VALUE2(type, "webp", "image/webp"   ), \
+    ENUM_VALUE2(type, "gif",  "image/gif"    ), \
+    ENUM_VALUE2(type, "ico",  "image/x-icon" ), \
+    ENUM_VALUE2(type, "mp3",  "audio/mpeg"   ), \
+    ENUM_VALUE2(type, "ogg",  "audio/ogg"    ), \
+    ENUM_VALUE2(type, "otf",  "font/otf"     ), \
+    ENUM_VALUE2(type, "ttf",  "font/ttf"     ), \
+    ENUM_VALUE2(type, "mp4",  "video/mp4"    )
+
 
 enum http_method {
     ENUM_HTTP_METHOD(ENUM_TYPE_VAL1)
