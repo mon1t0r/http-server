@@ -33,6 +33,12 @@
     ENUM_VALUE2(type, http_user_agent,     "User-Agent"     ), \
     ENUM_VALUE2(type, http_header_unknown, ""               )
 
+#define ENUM_HTTP_CONTENT_TYPE(type) \
+    ENUM_VALUE2(type, "",     "text/plain"   ), \
+    ENUM_VALUE2(type, "html", "text/html"    ), \
+    ENUM_VALUE2(type, "png",  "image/png"    ), \
+    ENUM_VALUE2(type, "ico",  "image/x-icon" )
+
 enum http_method {
     ENUM_HTTP_METHOD(ENUM_TYPE_VAL1)
 };
@@ -52,6 +58,8 @@ struct http_version {
 
 struct http_header_entry {
     enum http_header_type type;
+    /* Value is not const because some headers assign pointer to a
+     * dynamically allocated memory region here, which needs to be freed */
     char *value;
     struct http_header_entry *next;
 };

@@ -65,7 +65,7 @@ static off_t file_get_length(int fd)
 }
 
 static enum http_status
-response_content_create(char **buf_ptr, const char *uri)
+response_content_create(char **buf_ptr, int *buf_len_ptr, const char *uri)
 {
     char path_buf[path_buf_size];
     int path_len;
@@ -95,6 +95,12 @@ response_content_create(char **buf_ptr, const char *uri)
 
     stat_res = stat(path_buf, &s);
     if(stat_res < 0) {
+        if(errno == ENAMETOOLONG) {
+            return http_uri_too_large;
+        }
+        if(errno == EACCES || errno == ENOENT || errno == ENOTDIR) {
+            return http_not_found;
+        }
         return http_internal_error;
     }
     if(S_ISDIR(s.st_mode)) {
@@ -103,7 +109,10 @@ response_content_create(char **buf_ptr, const char *uri)
 
     fd = open(path_buf, O_RDONLY);
     if(fd < 0) {
-        if(errno == EACCES) {
+        if(errno == ENAMETOOLONG) {
+            return http_uri_too_large;
+        }
+        if(errno == EACCES || errno == ENOENT) {
             return http_not_found;
         }
         return http_internal_error;
@@ -123,11 +132,11 @@ response_content_create(char **buf_ptr, const char *uri)
         close(fd);
         return http_internal_error;
     }
-    buf[file_len] = '\0';
 
     close(fd);
 
     *buf_ptr = buf;
+    *buf_len_ptr = read_len;
     return http_ok;
 }
 
@@ -157,29 +166,56 @@ static void response_set_status(struct http_response *response,
 }
 
 static void response_header_length_create(struct http_header_entry *header,
-                                          const char *content)
+                                          int content_len)
 {
     char *buf;
-    int len;
 
     buf = malloc(int_buf_size);
 
-    len = strlen(content);
-
-    sprintf(buf, "%d", len);
+    sprintf(buf, "%d", content_len);
 
     header->type = http_content_length;
     header->value = buf;
 }
 
-static void
+static enum http_status
 response_header_content_type_create(struct http_header_entry *header,
-                                    char *uri)
+                                    const char *uri)
 {
-    /* TODO: detect content type */
+    static const char *exts[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL1) };
+    static const char *types[] = { ENUM_HTTP_CONTENT_TYPE(ENUM_TYPE_VAL2) };
+
+    char path_buf[path_buf_size];
+    int uri_len;
+    const char *filename;
+    const char *fileext;
+    int index;
 
     header->type = http_content_type;
-    header->value = "text/html";
+
+    uri_len = strlen(uri);
+    if(uri_len >= path_buf_size) {
+        return http_uri_too_large;
+    }
+
+    strcpy(path_buf, uri);
+
+    filename = basename(path_buf);
+    fileext = strrchr(filename, '.');
+    if(fileext == NULL || fileext == filename) {
+        header->value = "text/plain";
+        return http_ok;
+    }
+
+    index = str_arr_find(exts, sizeof(exts) / sizeof(exts[0]), fileext + 1);
+    if(index < 0) {
+        index = 0;
+    }
+
+    /* header->value will not be modified */
+    header->value = (char *) types[index];
+
+    return http_ok;
 }
 
 static int response_create_get(struct http_response *response,
@@ -190,20 +226,23 @@ static int response_create_get(struct http_response *response,
 
     response_setup(response);
 
+    status = response_header_content_type_create(&header,
+                                        request->request_line.request_uri);
+    if(status != http_ok) {
+        response_set_status(response, status);
+        return 1;
+    }
+    http_add_header(&response->headers, &header);
+
     status = response_content_create(&response->content,
+                                     &response->content_len,
                                      request->request_line.request_uri);
-
     response_set_status(response, status);
-
     if(status != http_ok) {
         return 1;
     }
 
-    response_header_content_type_create(&header,
-                                        request->request_line.request_uri);
-    http_add_header(&response->headers, &header);
-
-    response_header_length_create(&header, response->content);
+    response_header_length_create(&header, response->content_len);
     http_add_header(&response->headers, &header);
 
     return 1;

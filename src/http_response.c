@@ -6,25 +6,28 @@
 
 enum { int_buf_size = 32 };
 
-static int write_str(const char *str, char **buf_pos, int *size_left)
+static int write_buf(const char *buf, size_t len, char **buf_pos,
+                     int *size_left)
 {
-    size_t len;
-
     if(*size_left <= 0) {
         return 0;
     }
 
-    len = strlen(str);
     if(*size_left < len) {
         return 0;
     }
 
-    memcpy(*buf_pos, str, len);
+    memcpy(*buf_pos, buf, len);
 
     *buf_pos += len;
     *size_left -= len;
 
     return 1;
+}
+
+static int write_str(const char *str, char **buf_pos, int *size_left)
+{
+    return write_buf(str, strlen(str), buf_pos, size_left);
 }
 
 static int write_num(int val, char **buf_pos, int *size_left)
@@ -155,7 +158,8 @@ int http_response_write(const struct http_response *response, char *buf,
     }
 
     if(response->content != NULL) {
-        status = write_str(response->content, &buf_pos, &size_left);
+        status = write_buf(response->content, response->content_len,
+                           &buf_pos, &size_left);
         if(!status) {
             return 0;
         }
