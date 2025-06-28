@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <arpa/inet.h>
 
 #include "worker.h"
@@ -162,11 +161,9 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         }
 
         handle_status = handler_response_create(&response, &request, addr);
-        if(handle_status) {
-            send_status = res_send(conn_fd, &response, buf, recv_buf_size);
-            if(send_status == send_fatal_error) {
-                goto exit;
-            }
+        send_status = res_send(conn_fd, &response, buf, recv_buf_size);
+        if(!handle_status || send_status == send_fatal_error) {
+            goto exit;
         }
 
         buf_len = buf_pos = 0;

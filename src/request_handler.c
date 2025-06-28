@@ -226,25 +226,26 @@ static int res_creat_get(struct http_response *response,
                             &response->content_len,
                             request->request_line.request_uri);
     if(status != http_ok) {
-        res_set_status(response, status);
-        return 1;
+        goto exit;
     }
 
     /* Create Content-Type header */
     status = res_hdr_cont_t_creat(&header, request->request_line.request_uri);
     if(status != http_ok) {
         res_cont_free(&response->content);
-        res_set_status(response, status);
-        return 1;
+        goto exit;
     }
     http_add_header(&response->headers, &header);
+
+    status = http_ok;
+
+exit:
+    /* Set response status */
+    res_set_status(response, status);
 
     /* Create Content-Length header */
     res_hdr_cont_len_creat(&header, response->content_len);
     http_add_header(&response->headers, &header);
-
-    /* Set response status */
-    res_set_status(response, http_ok);
 
     return 1;
 }
