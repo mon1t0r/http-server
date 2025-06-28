@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <libgen.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -63,49 +64,8 @@ static off_t file_get_length(int fd)
     return length;
 }
 
-static void response_setup(struct http_response *response)
-{
-    struct http_header_entry header;
-
-    memset(response, 0, sizeof(*response));
-
-    response->status_line.version.major = response_version_major;
-    response->status_line.version.minor = response_version_minor;
-
-    header.type = http_date;
-    header.value = time_get_str();
-    http_add_header(&response->headers, &header);
-
-    header.type = http_server;
-    header.value = SERVER_STRING;
-    http_add_header(&response->headers, &header);
-}
-
-static void response_set_status(struct http_response *response,
-                           enum http_status status)
-{
-    response->status_line.status = status;
-    response->status_line.reason = (char *) http_status_str_get(status);
-}
-
-static void response_header_length_create(struct http_header_entry *header,
-                                          const char *content)
-{
-    char *buf;
-    int len;
-
-    buf = malloc(int_buf_size);
-
-    len = strlen(content);
-
-    sprintf(buf, "%d", len);
-
-    header->type = http_content_length;
-    header->value = buf;
-}
-
-static enum http_status response_content_create(
-    const struct http_request *request, char **buf_ptr)
+static enum http_status
+response_content_create(char **buf_ptr, const char *uri)
 {
     char path_buf[path_buf_size];
     int path_len;
@@ -120,18 +80,18 @@ static enum http_status response_content_create(
     ssize_t read_len;
 
     path_len = strlen(CONTENT_PATH);
-    uri_len = strlen(request->request_line.request_uri);
+    uri_len = strlen(uri);
 
     if(path_len + uri_len >= path_buf_size) {
-        return http_internal_error;
+        return http_uri_too_large;
     }
 
     /* Do not allow to go up in file tree */
-    if(str_find_ddot(request->request_line.request_uri, uri_len) >= 0) {
+    if(str_find_ddot(uri, uri_len) >= 0) {
         return http_bad_request;
     }
 
-    sprintf(path_buf, "%s%s", CONTENT_PATH, request->request_line.request_uri);
+    sprintf(path_buf, "%s%s", CONTENT_PATH, uri);
 
     stat_res = stat(path_buf, &s);
     if(stat_res < 0) {
@@ -171,6 +131,57 @@ static enum http_status response_content_create(
     return http_ok;
 }
 
+static void response_setup(struct http_response *response)
+{
+    struct http_header_entry header;
+
+    memset(response, 0, sizeof(*response));
+
+    response->status_line.version.major = response_version_major;
+    response->status_line.version.minor = response_version_minor;
+
+    header.type = http_date;
+    header.value = time_get_str();
+    http_add_header(&response->headers, &header);
+
+    header.type = http_server;
+    header.value = SERVER_STRING;
+    http_add_header(&response->headers, &header);
+}
+
+static void response_set_status(struct http_response *response,
+                                enum http_status status)
+{
+    response->status_line.status = status;
+    response->status_line.reason = (char *) http_status_str_get(status);
+}
+
+static void response_header_length_create(struct http_header_entry *header,
+                                          const char *content)
+{
+    char *buf;
+    int len;
+
+    buf = malloc(int_buf_size);
+
+    len = strlen(content);
+
+    sprintf(buf, "%d", len);
+
+    header->type = http_content_length;
+    header->value = buf;
+}
+
+static void
+response_header_content_type_create(struct http_header_entry *header,
+                                    char *uri)
+{
+    /* TODO: detect content type */
+
+    header->type = http_content_type;
+    header->value = "text/html";
+}
+
 static int response_create_get(struct http_response *response,
                                const struct http_request *request)
 {
@@ -179,16 +190,17 @@ static int response_create_get(struct http_response *response,
 
     response_setup(response);
 
-    status = response_content_create(request, &response->content);
+    status = response_content_create(&response->content,
+                                     request->request_line.request_uri);
+
+    response_set_status(response, status);
+
     if(status != http_ok) {
-        response_set_status(response, status);
         return 1;
     }
 
-    response_set_status(response, http_ok);
-
-    header.type = http_content_type;
-    header.value = "text/html";
+    response_header_content_type_create(&header,
+                                        request->request_line.request_uri);
     http_add_header(&response->headers, &header);
 
     response_header_length_create(&header, response->content);
@@ -216,6 +228,14 @@ int handler_response_create(struct http_response *response,
                             const struct http_request *request,
                             const struct sockaddr_in *addr)
 {
+    /* Only HTTP/1.1 is supported */
+    if(request->request_line.version.major != 1 ||
+        request->request_line.version.minor != 1) {
+        response_setup(response);
+        response_set_status(response, http_version_unsupported);
+        return 1;
+    }
+
     switch(request->request_line.method) {
         case http_get:
             return response_create_get(response, request);

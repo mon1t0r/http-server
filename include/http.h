@@ -17,10 +17,12 @@
 #define ENUM_HTTP_STATUS(type) \
     ENUM_VALUE3(type, http_ok,                  200, "OK"                  ), \
     ENUM_VALUE3(type, http_bad_request,         400, "Bad Request"         ), \
-    ENUM_VALUE3(type, http_forbidden,           403, "Forbidden"           ), \
     ENUM_VALUE3(type, http_not_found,           404, "Not Found"           ), \
+    ENUM_VALUE3(type, http_uri_too_large,       414, "Request-URI Too Large"),\
     ENUM_VALUE3(type, http_internal_error,      500, "Internal Server Error"),\
-    ENUM_VALUE3(type, http_service_unavailable, 503, "Service Unavailable" ), \
+    ENUM_VALUE3(type, http_not_implemented,     501, "Not Implemented"     ), \
+    ENUM_VALUE3(type, http_version_unsupported, 505, \
+                "HTTP Version not supported"      ), \
     ENUM_VALUE3(type, http_status_extension,    0,   ""                    )
 
 #define ENUM_HTTP_HEADER_TYPE(type) \
