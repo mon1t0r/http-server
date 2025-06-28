@@ -162,6 +162,8 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         handle_status = handler_response_create(&response, &request, addr);
         send_status = res_send(conn_fd, &response, buf, recv_buf_size);
+
+        /* Close connection if handler returned 0, or send error occured */
         if(!handle_status || send_status == send_fatal_error) {
             goto exit;
         }

@@ -101,12 +101,12 @@ void http_add_header(struct http_header_entry **headers,
 }
 
 const struct http_header_entry *
-http_get_header(const struct http_header_entry **headers,
+http_get_header(const struct http_header_entry *headers_first,
                 enum http_header_type type)
 {
     const struct http_header_entry *header;
 
-    header = *headers;
+    header = headers_first;
     while(header != NULL) {
         if(header->type == type) {
             return header;

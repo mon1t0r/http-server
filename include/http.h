@@ -17,6 +17,7 @@
 #define ENUM_HTTP_STATUS(type) \
     ENUM_VALUE3(type, http_ok,                  200, "OK"                  ), \
     ENUM_VALUE3(type, http_bad_request,         400, "Bad Request"         ), \
+    ENUM_VALUE3(type, http_forbidden,           403, "Forbidden"           ), \
     ENUM_VALUE3(type, http_not_found,           404, "Not Found"           ), \
     ENUM_VALUE3(type, http_uri_too_large,       414, "Request-URI Too Large"),\
     ENUM_VALUE3(type, http_internal_error,      500, "Internal Server Error"),\
@@ -31,6 +32,7 @@
     ENUM_VALUE2(type, http_content_length, "Content-Length" ), \
     ENUM_VALUE2(type, http_content_type,   "Content-Type"   ), \
     ENUM_VALUE2(type, http_user_agent,     "User-Agent"     ), \
+    ENUM_VALUE2(type, http_connection,     "Connection"     ), \
     ENUM_VALUE2(type, http_header_unknown, ""               )
 
 #define ENUM_HTTP_CONTENT_TYPE(type) \
@@ -79,8 +81,9 @@ const char *http_cont_type_str_get(const char *file_ext);
 void http_add_header(struct http_header_entry **headers,
                      const struct http_header_entry *header_src);
 
-const struct http_header_entry *http_get_header(
-    const struct http_header_entry **headers, enum http_header_type type);
+const struct http_header_entry *
+http_get_header(const struct http_header_entry *headers_first,
+                enum http_header_type type);
 
 void http_remove_headers(struct http_header_entry **headers);
 

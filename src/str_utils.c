@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 
@@ -64,4 +65,33 @@ int str_arr_find(const char * const *arr, int arr_len, const char *str)
     }
 
     return -1;
+}
+
+int str_cmp_case(const char *str1, const char *str2)
+{
+    do {
+        if(tolower(*str1) != tolower(*str2)) {
+            return 1;
+        }
+
+        str1++;
+        str2++;
+    } while(*str1 != '\0' && *str2 != '\0');
+
+    return *str1 != '\0' || *str2 != '\0';
+}
+
+void str_ltrim(char *str)
+{
+    int i;
+    size_t len;
+
+    i = 0;
+    len = strlen(str);
+
+    while(i < len && isspace(str[i])) {
+        i++;
+    }
+
+    memmove(str, str + i, len - i + 1);
 }

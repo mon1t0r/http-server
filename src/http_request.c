@@ -67,6 +67,7 @@ int http_header_parse(struct http_header_entry *header, char *str)
         return 0;
     }
     header->value = token;
+    str_ltrim(header->value);
 
     return 1;
 }

@@ -18,6 +18,8 @@
 #define SERVER_STRING "TestServer/1.0"
 #define CONTENT_PATH "./html"
 
+#define HEADER_KEEP_ALIVE "Keep-Alive"
+
 enum {
     int_buf_size  = 32,
     path_buf_size = 150,
@@ -212,14 +214,11 @@ res_hdr_cont_t_creat(struct http_header_entry *header, const char *uri)
     return http_ok;
 }
 
-static int res_creat_get(struct http_response *response,
-                         const struct http_request *request)
+static void res_creat_get(struct http_response *response,
+                          const struct http_request *request)
 {
     struct http_header_entry header;
     enum http_status status;
-
-    /* Setup */
-    res_setup(response);
 
     /* Create content */
     status = res_cont_creat(&response->content,
@@ -246,51 +245,87 @@ exit:
     /* Create Content-Length header */
     res_hdr_cont_len_creat(&header, response->content_len);
     http_add_header(&response->headers, &header);
-
-    return 1;
 }
 
-static int res_creat_head(struct http_response *response,
-                          const struct http_request *request)
+static void res_creat_head(struct http_response *response,
+                           const struct http_request *request)
 {
-    int status;
-
-    status = res_creat_get(response, request);
-
+    res_creat_get(response, request);
     res_cont_free(&response->content);
-
-    return status;
 }
 
-static int res_creat_default(struct http_response *response)
+static enum http_status req_check(const struct http_request *request)
 {
-    res_setup(response);
+    const struct http_header_entry *header;
 
-    res_set_status(response, http_not_implemented);
+    /* Only HTTP/1.1 is supported */
+    if(request->request_line.version.major != 1 ||
+        request->request_line.version.minor != 1) {
+        return http_version_unsupported;
+    }
 
-    return 1;
+    /* If no User-Agent specified, return 403 Forbidden */
+    header = http_get_header(request->headers, http_user_agent);
+    if(header == NULL) {
+        return http_forbidden;
+    }
+
+    return http_ok;
+}
+
+static int req_con_keep_alive(const struct http_request *request)
+{
+    const struct http_header_entry *header;
+
+    header = http_get_header(request->headers, http_connection);
+    if(header == NULL) {
+        return 1;
+    }
+
+    return 0 == str_cmp_case(header->value, HEADER_KEEP_ALIVE);
 }
 
 int handler_response_create(struct http_response *response,
                             const struct http_request *request,
                             const struct sockaddr_in *addr)
 {
-    /* Only HTTP/1.1 is supported */
-    if(request->request_line.version.major != 1 ||
-        request->request_line.version.minor != 1) {
-        res_setup(response);
-        res_set_status(response, http_version_unsupported);
-        return 1;
+    int conn_keep_alive;
+    enum http_status status;
+    struct http_header_entry header;
+
+    /* Check if connection should be kept alive */
+    conn_keep_alive = req_con_keep_alive(request);
+
+    /* Setup response */
+    res_setup(response);
+
+    /* Check request */
+    status = req_check(request);
+    if(status != http_ok) {
+        res_set_status(response, status);
+        goto exit;
     }
 
     switch(request->request_line.method) {
         case http_get:
-            return res_creat_get(response, request);
+            res_creat_get(response, request);
+            break;
         case http_head:
-            return res_creat_head(response, request);
+            res_creat_head(response, request);
+            break;
         default:
-            return res_creat_default(response);
+            res_set_status(response, http_not_implemented);
+            break;
     }
+
+    if(conn_keep_alive) {
+        header.type = http_connection;
+        header.value = HEADER_KEEP_ALIVE;
+        http_add_header(&response->headers, &header);
+    }
+
+exit:
+    return conn_keep_alive;
 }
 
 void handler_response_free(struct http_response *response)

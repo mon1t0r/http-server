@@ -9,4 +9,8 @@ int parse_uint(const char *str);
 
 int str_arr_find(const char * const *arr, int arr_len, const char *str);
 
+int str_cmp_case(const char *str1, const char *str2);
+
+void str_ltrim(char *str);
+
 #endif
