@@ -290,8 +290,7 @@ static int req_con_keep_alive(const struct http_req *request)
 }
 
 int handler_res_creat(struct http_res *response,
-                      const struct http_req *request,
-                      const struct sockaddr_in *addr)
+                      const struct http_req *request)
 {
     int conn_keep_alive;
     enum http_status status;
