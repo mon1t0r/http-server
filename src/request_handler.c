@@ -11,7 +11,6 @@
 
 #include "request_handler.h"
 #include "http.h"
-#include "http_request.h"
 #include "http_response.h"
 #include "str_utils.h"
 
@@ -150,25 +149,25 @@ static void res_cont_free(char **buf_ptr)
     }
 }
 
-static void res_setup(struct http_response *response)
+static void res_setup(struct http_res *response)
 {
-    struct http_header_entry header;
+    struct http_hdr header;
 
     memset(response, 0, sizeof(*response));
 
-    response->status_line.version.major = res_ver_major;
-    response->status_line.version.minor = res_ver_minor;
+    response->status_line.ver.major = res_ver_major;
+    response->status_line.ver.minor = res_ver_minor;
 
     header.type = http_date;
     header.value = time_get_str();
-    http_add_header(&response->headers, &header);
+    http_hdr_add(&response->hdrs, &header);
 
     header.type = http_server;
     header.value = SERVER_STRING;
-    http_add_header(&response->headers, &header);
+    http_hdr_add(&response->hdrs, &header);
 }
 
-static void res_set_status(struct http_response *response,
+static void res_set_status(struct http_res *response,
                            enum http_status status)
 {
     response->status_line.status = status;
@@ -176,7 +175,7 @@ static void res_set_status(struct http_response *response,
 }
 
 static void
-res_hdr_cont_len_creat(struct http_header_entry *header, int content_len)
+res_hdr_cont_len_creat(struct http_hdr *header, int content_len)
 {
     char *buf;
 
@@ -189,7 +188,7 @@ res_hdr_cont_len_creat(struct http_header_entry *header, int content_len)
 }
 
 static enum http_status
-res_hdr_cont_t_creat(struct http_header_entry *header, const char *uri)
+res_hdr_cont_t_creat(struct http_hdr *header, const char *uri)
 {
     char path_buf[path_buf_size];
     size_t uri_len;
@@ -214,27 +213,27 @@ res_hdr_cont_t_creat(struct http_header_entry *header, const char *uri)
     return http_ok;
 }
 
-static void res_creat_get(struct http_response *response,
-                          const struct http_request *request)
+static void
+res_creat_get(struct http_res *response, const struct http_req *request)
 {
-    struct http_header_entry header;
+    struct http_hdr header;
     enum http_status status;
 
     /* Create content */
     status = res_cont_creat(&response->content,
                             &response->content_len,
-                            request->request_line.request_uri);
+                            request->req_line.uri);
     if(status != http_ok) {
         goto exit;
     }
 
     /* Create Content-Type header */
-    status = res_hdr_cont_t_creat(&header, request->request_line.request_uri);
+    status = res_hdr_cont_t_creat(&header, request->req_line.uri);
     if(status != http_ok) {
         res_cont_free(&response->content);
         goto exit;
     }
-    http_add_header(&response->headers, &header);
+    http_hdr_add(&response->hdrs, &header);
 
     status = http_ok;
 
@@ -244,28 +243,28 @@ exit:
 
     /* Create Content-Length header */
     res_hdr_cont_len_creat(&header, response->content_len);
-    http_add_header(&response->headers, &header);
+    http_hdr_add(&response->hdrs, &header);
 }
 
-static void res_creat_head(struct http_response *response,
-                           const struct http_request *request)
+static void
+res_creat_head(struct http_res *response, const struct http_req *request)
 {
     res_creat_get(response, request);
     res_cont_free(&response->content);
 }
 
-static enum http_status req_check(const struct http_request *request)
+static enum http_status req_check(const struct http_req *request)
 {
-    const struct http_header_entry *header;
+    const struct http_hdr *header;
 
     /* Only HTTP/1.1 is supported */
-    if(request->request_line.version.major != 1 ||
-        request->request_line.version.minor != 1) {
+    if(request->req_line.ver.major != 1 ||
+        request->req_line.ver.minor != 1) {
         return http_version_unsupported;
     }
 
     /* If no User-Agent specified, return 403 Forbidden */
-    header = http_get_header(request->headers, http_user_agent);
+    header = http_hdr_get(request->hdrs, http_user_agent);
     if(header == NULL) {
         return http_forbidden;
     }
@@ -273,11 +272,11 @@ static enum http_status req_check(const struct http_request *request)
     return http_ok;
 }
 
-static int req_con_keep_alive(const struct http_request *request)
+static int req_con_keep_alive(const struct http_req *request)
 {
-    const struct http_header_entry *header;
+    const struct http_hdr *header;
 
-    header = http_get_header(request->headers, http_connection);
+    header = http_hdr_get(request->hdrs, http_connection);
     if(header == NULL) {
         return 1;
     }
@@ -285,13 +284,13 @@ static int req_con_keep_alive(const struct http_request *request)
     return 0 == str_cmp_case(header->value, HEADER_KEEP_ALIVE);
 }
 
-int handler_response_create(struct http_response *response,
-                            const struct http_request *request,
-                            const struct sockaddr_in *addr)
+int handler_res_creat(struct http_res *response,
+                      const struct http_req *request,
+                      const struct sockaddr_in *addr)
 {
     int conn_keep_alive;
     enum http_status status;
-    struct http_header_entry header;
+    struct http_hdr header;
 
     /* Check if connection should be kept alive */
     conn_keep_alive = req_con_keep_alive(request);
@@ -306,7 +305,7 @@ int handler_response_create(struct http_response *response,
         goto exit;
     }
 
-    switch(request->request_line.method) {
+    switch(request->req_line.method) {
         case http_get:
             res_creat_get(response, request);
             break;
@@ -321,18 +320,18 @@ int handler_response_create(struct http_response *response,
     if(conn_keep_alive) {
         header.type = http_connection;
         header.value = HEADER_KEEP_ALIVE;
-        http_add_header(&response->headers, &header);
+        http_hdr_add(&response->hdrs, &header);
     }
 
 exit:
     return conn_keep_alive;
 }
 
-void handler_response_free(struct http_response *response)
+void handler_res_free(struct http_res *response)
 {
-    struct http_header_entry *header;
+    struct http_hdr *header;
 
-    header = response->headers;
+    header = response->hdrs;
     while(header != NULL) {
         if(header->type == http_content_length) {
             free(header->value);
@@ -340,7 +339,7 @@ void handler_response_free(struct http_response *response)
         header = header->next;
     }
 
-    http_remove_headers(&response->headers);
+    http_hdrs_remove(&response->hdrs);
 
     res_cont_free(&response->content);
 }

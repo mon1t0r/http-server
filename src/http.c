@@ -18,7 +18,7 @@ enum http_method http_method_parse(const char *str)
     return index;
 }
 
-enum http_header_type http_header_type_parse(const char *str)
+enum http_hdr_type http_hdr_type_parse(const char *str)
 {
     static const char *names[] = { ENUM_HTTP_HEADER_TYPE(ENUM_TYPE_VAL2) };
 
@@ -32,7 +32,7 @@ enum http_header_type http_header_type_parse(const char *str)
     return index;
 }
 
-const char *http_header_type_str_get(enum http_header_type header_type)
+const char *http_hdr_type_str_get(enum http_hdr_type header_type)
 {
     static const char *names[] = { ENUM_HTTP_HEADER_TYPE(ENUM_TYPE_VAL2) };
 
@@ -73,18 +73,17 @@ const char *http_cont_type_str_get(const char *file_ext)
     return types[index];
 }
 
-void http_add_header(struct http_header_entry **headers,
-                     const struct http_header_entry *header_src)
+void http_hdr_add(struct http_hdr **headers, const struct http_hdr *header_src)
 {
-    struct http_header_entry *header;
-    struct http_header_entry *header_temp;
+    struct http_hdr *header;
+    struct http_hdr *header_temp;
 
-    header = malloc(sizeof(struct http_header_entry));
+    header = malloc(sizeof(*header));
     if(!header) {
         return;
     }
 
-    memcpy(header, header_src, sizeof(struct http_header_entry));
+    memcpy(header, header_src, sizeof(*header));
     header->next = NULL;
 
     if(*headers == NULL) {
@@ -100,11 +99,10 @@ void http_add_header(struct http_header_entry **headers,
     header_temp->next = header;
 }
 
-const struct http_header_entry *
-http_get_header(const struct http_header_entry *headers_first,
-                enum http_header_type type)
+const struct http_hdr *
+http_hdr_get(const struct http_hdr *headers_first, enum http_hdr_type type)
 {
-    const struct http_header_entry *header;
+    const struct http_hdr *header;
 
     header = headers_first;
     while(header != NULL) {
@@ -117,9 +115,9 @@ http_get_header(const struct http_header_entry *headers_first,
     return NULL;
 }
 
-void http_remove_headers(struct http_header_entry **headers)
+void http_hdrs_remove(struct http_hdr **headers)
 {
-    struct http_header_entry *header_temp;
+    struct http_hdr *header_temp;
 
     while(*headers != NULL) {
         header_temp = (*headers)->next;

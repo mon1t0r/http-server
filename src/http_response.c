@@ -44,7 +44,7 @@ static int write_num(int val, char **buf_pos, int *size_left)
 }
 
 static int
-write_status(const struct http_status_line *status_line, char **buf_pos,
+write_status(const struct http_stat_line *status_line, char **buf_pos,
              int *size_left)
 {
     int status;
@@ -54,7 +54,7 @@ write_status(const struct http_status_line *status_line, char **buf_pos,
         return 0;
     }
 
-    status = write_num(status_line->version.major, buf_pos, size_left);
+    status = write_num(status_line->ver.major, buf_pos, size_left);
     if(!status) {
         return 0;
     }
@@ -64,7 +64,7 @@ write_status(const struct http_status_line *status_line, char **buf_pos,
         return 0;
     }
 
-    status = write_num(status_line->version.minor, buf_pos, size_left);
+    status = write_num(status_line->ver.minor, buf_pos, size_left);
     if(!status) {
         return 0;
     }
@@ -99,12 +99,11 @@ write_status(const struct http_status_line *status_line, char **buf_pos,
 }
 
 static int
-write_hdr(const struct http_header_entry *header, char **buf_pos,
-          int *size_left)
+write_hdr(const struct http_hdr *header, char **buf_pos, int *size_left)
 {
     int status;
 
-    status = write_str(http_header_type_str_get(header->type), buf_pos,
+    status = write_str(http_hdr_type_str_get(header->type), buf_pos,
                        size_left);
     if(!status) {
         return 0;
@@ -128,13 +127,13 @@ write_hdr(const struct http_header_entry *header, char **buf_pos,
     return 1;
 }
 
-int http_response_write(const struct http_response *response, char *buf,
-                        int buf_size)
+int
+http_res_write(const struct http_res *response, char *buf, int buf_size)
 {
     char *buf_pos;
     int size_left;
     int status;
-    struct http_header_entry *header;
+    struct http_hdr *header;
 
     buf_pos = buf;
     size_left = buf_size;
@@ -144,7 +143,7 @@ int http_response_write(const struct http_response *response, char *buf,
         return 0;
     }
 
-    header = response->headers;
+    header = response->hdrs;
     while(header != NULL) {
         status = write_hdr(header, &buf_pos, &size_left);
         if(!status) {

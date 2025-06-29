@@ -3,21 +3,20 @@
 
 #include "http.h"
 
-struct http_request_line {
+struct http_req_line {
     enum http_method method;
-    char *request_uri;
-    struct http_version version;
+    char *uri;
+    struct http_ver ver;
 };
 
-struct http_request {
-    struct http_request_line request_line;
-    struct http_header_entry *headers;
-    char *content;
-    int content_len;
+struct http_req {
+    struct http_req_line req_line;
+    struct http_hdr *hdrs;
+    /* The content field may be here */
 };
 
-int http_request_line_parse(struct http_request_line *request_line, char *str);
+int http_req_line_parse(struct http_req_line *request_line, char *str);
 
-int http_header_parse(struct http_header_entry *header, char *str);
+int http_hdr_parse(struct http_hdr *header, char *str);
 
 #endif

@@ -3,7 +3,7 @@
 #include "http_request.h"
 #include "str_utils.h"
 
-int http_request_line_parse(struct http_request_line *request_line, char *str)
+int http_req_line_parse(struct http_req_line *request_line, char *str)
 {
     char *token;
 
@@ -19,7 +19,7 @@ int http_request_line_parse(struct http_request_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->request_uri = token;
+    request_line->uri = token;
 
     /* HTTP */
     token = strtok(NULL, "/");
@@ -32,8 +32,8 @@ int http_request_line_parse(struct http_request_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->version.major = parse_uint(token);
-    if(request_line->version.major < 0) {
+    request_line->ver.major = parse_uint(token);
+    if(request_line->ver.major < 0) {
         return 0;
     }
 
@@ -42,15 +42,15 @@ int http_request_line_parse(struct http_request_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->version.minor = parse_uint(token);
-    if(request_line->version.minor < 0) {
+    request_line->ver.minor = parse_uint(token);
+    if(request_line->ver.minor < 0) {
         return 0;
     }
 
     return 1;
 }
 
-int http_header_parse(struct http_header_entry *header, char *str)
+int http_hdr_parse(struct http_hdr *header, char *str)
 {
     char *token;
 
@@ -59,7 +59,7 @@ int http_header_parse(struct http_header_entry *header, char *str)
     if(token == NULL) {
         return 0;
     }
-    header->type = http_header_type_parse(str);
+    header->type = http_hdr_type_parse(str);
 
     /* 128 */
     token = strtok(NULL, "");

@@ -24,12 +24,12 @@ enum send_status {
     send_fatal_error
 };
 
-static int hdr_parse(struct http_request *request, char *str)
+static int hdr_parse(struct http_req *request, char *str)
 {
-    struct http_header_entry header;
+    struct http_hdr header;
     int parse_res;
 
-    parse_res = http_header_parse(&header, str);
+    parse_res = http_hdr_parse(&header, str);
     if(!parse_res) {
         return 0;
     }
@@ -39,19 +39,19 @@ static int hdr_parse(struct http_request *request, char *str)
         return 1;
     }
 
-    http_add_header(&request->headers, &header);
+    http_hdr_add(&request->hdrs, &header);
 
     return 1;
 }
 
 static enum recv_status
-data_recv(struct http_request *request, char *buf, int buf_len, int *buf_pos)
+data_recv(struct http_req *request, char *buf, int buf_len, int *buf_pos)
 {
     int line_len;
     int parse_res;
     char *line;
 
-    /* TODO: Receive request content */
+    /* Request content may be received here */
 
     for(;;) {
         line_len = str_find_crlf(buf + *buf_pos, buf_len);
@@ -66,7 +66,7 @@ data_recv(struct http_request *request, char *buf, int buf_len, int *buf_pos)
 
         /* *buf_pos == 0, beginning of the data */
         if(buf == line) {
-            parse_res = http_request_line_parse(&request->request_line, line);
+            parse_res = http_req_line_parse(&request->req_line, line);
             if(!parse_res) {
                 /* Request line parsing failed - error */
                 return recv_stop_error;
@@ -90,14 +90,13 @@ data_recv(struct http_request *request, char *buf, int buf_len, int *buf_pos)
 }
 
 static enum send_status
-res_send(int conn_fd, const struct http_response *response, char *buf,
-         int buf_size)
+res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
 {
     size_t status;
 
     /* TODO: Send content partially, do not load all in buffer */
 
-    status = http_response_write(response, buf, buf_size);
+    status = http_res_write(response, buf, buf_size);
     if(status <= 0) {
         return send_non_critical;
     }
@@ -116,8 +115,8 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     char *buf;
     int exit_code;
 
-    struct http_request request;
-    struct http_response response;
+    struct http_req request;
+    struct http_res response;
 
     int buf_pos;
     int buf_len;
@@ -162,7 +161,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
             continue;
         }
 
-        handle_status = handler_response_create(&response, &request, addr);
+        handle_status = handler_res_creat(&response, &request, addr);
         send_status = res_send(conn_fd, &response, buf, buf_size);
 
         /* Close connection if handler returned 0, or send error occured */
@@ -173,11 +172,11 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         buf_len = buf_pos = 0;
 
         /* Reset request */
-        http_remove_headers(&request.headers);
+        http_hdrs_remove(&request.hdrs);
         memset(&request, 0, sizeof(request));
 
         /* Free response */
-        handler_response_free(&response);
+        handler_res_free(&response);
     }
 
 exit:
