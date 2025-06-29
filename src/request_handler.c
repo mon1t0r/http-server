@@ -66,7 +66,7 @@ static off_t file_get_len(int fd)
 }
 
 static enum http_status
-res_cont_creat(char **buf_ptr, int *buf_len_ptr, const char *uri)
+res_cont_creat(struct http_res *response, const char *uri)
 {
     char path_buf[path_buf_size];
     size_t path_len;
@@ -75,10 +75,7 @@ res_cont_creat(char **buf_ptr, int *buf_len_ptr, const char *uri)
     struct stat s;
     int stat_res;
 
-    char *buf;
     int fd;
-    off_t file_len;
-    ssize_t read_len;
 
     path_len = strlen(CONTENT_PATH);
     uri_len = strlen(uri);
@@ -119,34 +116,29 @@ res_cont_creat(char **buf_ptr, int *buf_len_ptr, const char *uri)
         return http_internal_error;
     }
 
-    file_len = file_get_len(fd);
-    if(file_len < 0) {
-        return http_internal_error;
-    }
+    response->content.fd = fd;
+    response->content_type = http_cont_file;
+    response->content_len = file_get_len(fd);
 
-    /* +1 byte for terminator */
-    buf = malloc(file_len + 1);
-
-    read_len = read(fd, buf, file_len);
-    if(read_len != file_len) {
-        free(buf);
-        close(fd);
-        return http_internal_error;
-    }
-
-    close(fd);
-
-    *buf_ptr = buf;
-    *buf_len_ptr = read_len;
     return http_ok;
 }
 
-static void res_cont_free(char **buf_ptr)
+static void res_cont_free(struct http_res *response)
 {
-    if(*buf_ptr != NULL) {
-        free(*buf_ptr);
-        *buf_ptr = NULL;
+    switch(response->content_type) {
+        case http_cont_buffer:
+            free(response->content.buf);
+            break;
+
+        case http_cont_file:
+            close(response->content.fd);
+            break;
+
+        case http_cont_none:
+            return;
     }
+
+    response->content_type = http_cont_none;
 }
 
 static void res_setup(struct http_res *response)
@@ -220,9 +212,7 @@ res_creat_get(struct http_res *response, const struct http_req *request)
     enum http_status status;
 
     /* Create content */
-    status = res_cont_creat(&response->content,
-                            &response->content_len,
-                            request->req_line.uri);
+    status = res_cont_creat(response, request->req_line.uri);
     if(status != http_ok) {
         goto exit;
     }
@@ -230,7 +220,7 @@ res_creat_get(struct http_res *response, const struct http_req *request)
     /* Create Content-Type header */
     status = res_hdr_cont_t_creat(&header, request->req_line.uri);
     if(status != http_ok) {
-        res_cont_free(&response->content);
+        res_cont_free(response);
         goto exit;
     }
     http_hdr_add(&response->hdrs, &header);
@@ -238,19 +228,19 @@ res_creat_get(struct http_res *response, const struct http_req *request)
     status = http_ok;
 
 exit:
-    /* Set response status */
-    res_set_status(response, status);
-
     /* Create Content-Length header */
     res_hdr_cont_len_creat(&header, response->content_len);
     http_hdr_add(&response->hdrs, &header);
+
+    /* Set response status */
+    res_set_status(response, status);
 }
 
 static void
 res_creat_head(struct http_res *response, const struct http_req *request)
 {
     res_creat_get(response, request);
-    res_cont_free(&response->content);
+    res_cont_free(response);
 }
 
 static enum http_status req_check(const struct http_req *request)
@@ -341,5 +331,5 @@ void handler_res_free(struct http_res *response)
 
     http_hdrs_remove(&response->hdrs);
 
-    res_cont_free(&response->content);
+    res_cont_free(response);
 }

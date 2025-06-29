@@ -158,8 +158,8 @@ http_res_write(const struct http_res *response, char *buf, int buf_size)
         return 0;
     }
 
-    if(response->content != NULL) {
-        status = write_buf(response->content, response->content_len,
+    if(response->content_type == http_cont_buffer) {
+        status = write_buf(response->content.buf, response->content_len,
                            &buf_pos, &size_left);
         if(!status) {
             return 0;

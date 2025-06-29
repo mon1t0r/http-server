@@ -92,22 +92,45 @@ data_recv(struct http_req *request, char *buf, int buf_len, int *buf_pos)
 static enum send_status
 res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
 {
+    size_t bytes_left;
+    size_t bytes_sent;
     size_t status;
 
-    /* TODO: Send content partially, do not load all in buffer */
-
-    status = http_res_write(response, buf, buf_size);
-    if(status <= 0) {
+    bytes_left = http_res_write(response, buf, buf_size);
+    if(bytes_left <= 0) {
         return send_non_critical;
     }
 
-    status = send(conn_fd, buf, status, 0);
-    if(status >= 0) {
+    bytes_sent = 0;
+    while(bytes_left > 0) {
+        status = send(conn_fd, buf + bytes_sent, bytes_left, 0);
+        if(status < 0) {
+            perror("send()");
+            return send_fatal_error;
+        }
+
+        bytes_sent += status;
+        bytes_left -= status;
+    }
+
+    if(response->content_type != http_cont_file) {
         return send_ok;
     }
 
-    perror("send()");
-    return send_fatal_error;
+    while((bytes_left = read(response->content.fd, buf, buf_size)) > 0) {
+        status = send(conn_fd, buf, bytes_left, 0);
+        if(status < 0) {
+            perror("send()");
+            return send_fatal_error;
+        }
+    }
+
+    if(bytes_left < 0) {
+        perror("read()");
+        return send_fatal_error;
+    }
+
+    return send_ok;
 }
 
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
@@ -135,6 +158,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
     buf_len = buf_pos = 0;
     memset(&request, 0, sizeof(request));
+    memset(&response, 0, sizeof(response));
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, buf_size - buf_len, 0);
@@ -171,7 +195,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
         buf_len = buf_pos = 0;
 
-        /* Reset request */
+        /* Free request headers & reset request */
         http_hdrs_remove(&request.hdrs);
         memset(&request, 0, sizeof(request));
 
@@ -180,6 +204,10 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     }
 
 exit:
+    /* Free request & response */
+    http_hdrs_remove(&request.hdrs);
+    handler_res_free(&response);
+
     free(buf);
     close(conn_fd);
     return exit_code;
