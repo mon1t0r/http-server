@@ -35,6 +35,7 @@
     ENUM_VALUE2(type, http_content_type,   "Content-Type"   ), \
     ENUM_VALUE2(type, http_user_agent,     "User-Agent"     ), \
     ENUM_VALUE2(type, http_connection,     "Connection"     ), \
+    ENUM_VALUE2(type, http_keep_alive,     "Keep-Alive"     ), \
     ENUM_VALUE2(type, http_header_unknown, ""               )
 
 #define ENUM_HTTP_CONTENT_TYPE(type) \

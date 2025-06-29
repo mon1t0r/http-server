@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 
 #include "worker.h"
@@ -10,7 +12,10 @@
 #include "request_handler.h"
 #include "str_utils.h"
 
-enum { buf_size = 8192 };
+enum {
+    buf_size     = 8192,
+    sock_timeout = 5
+};
 
 enum recv_status {
     recv_continue,
@@ -133,6 +138,23 @@ res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
     return send_ok;
 }
 
+static int sock_init(int sock_fd)
+{
+    struct timeval tv;
+    int res;
+
+    tv.tv_sec = sock_timeout;
+    tv.tv_usec = 0;
+
+    res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    if(res < 0) {
+        perror("setsockopt()");
+        return 0;
+    }
+
+    return 1;
+}
+
 int worker_run(int conn_fd, const struct sockaddr_in *addr)
 {
     char *buf;
@@ -148,6 +170,10 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     enum send_status send_status;
     int handle_status;
 
+    buf_len = buf_pos = 0;
+    memset(&request, 0, sizeof(request));
+    memset(&response, 0, sizeof(response));
+
     exit_code = EXIT_FAILURE;
 
     buf = malloc(buf_size);
@@ -156,14 +182,18 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
         goto exit;
     }
 
-    buf_len = buf_pos = 0;
-    memset(&request, 0, sizeof(request));
-    memset(&response, 0, sizeof(response));
+    handle_status = sock_init(conn_fd);
+    if(!handle_status) {
+        goto exit;
+    }
 
     for(;;) {
         data_len = recv(conn_fd, buf + buf_len, buf_size - buf_len, 0);
         if(data_len < 0) {
-            perror("recv()");
+            /* If errno == EWOULDBLOCK, timeout expired */
+            if(errno != EWOULDBLOCK) {
+                perror("recv()");
+            }
             goto exit;
         }
         if(data_len == 0) {

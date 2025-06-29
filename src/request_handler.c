@@ -20,10 +20,12 @@
 #define HEADER_KEEP_ALIVE "Keep-Alive"
 
 enum {
-    int_buf_size  = 32,
-    path_buf_size = 150,
-    res_ver_major = 1,
-    res_ver_minor = 1
+    hdr_val_buf_size   = 70,
+    int_buf_size       = 32,
+    path_buf_size      = 150,
+    ver_major          = 1,
+    ver_minor          = 1,
+    keep_alive_timeout = 5
 };
 
 static char *time_get_str(void)
@@ -147,8 +149,8 @@ static void res_setup(struct http_res *response)
 
     memset(response, 0, sizeof(*response));
 
-    response->status_line.ver.major = res_ver_major;
-    response->status_line.ver.minor = res_ver_minor;
+    response->status_line.ver.major = ver_major;
+    response->status_line.ver.minor = ver_minor;
 
     header.type = http_date;
     header.value = time_get_str();
@@ -164,6 +166,19 @@ static void res_set_status(struct http_res *response,
 {
     response->status_line.status = status;
     response->status_line.reason = (char *) http_status_str_get(status);
+}
+
+static void
+res_hdr_keep_alive_creat(struct http_hdr *header)
+{
+    char *buf;
+
+    buf = malloc(hdr_val_buf_size);
+
+    sprintf(buf, "timeout=%d", keep_alive_timeout);
+
+    header->type = http_keep_alive;
+    header->value = buf;
 }
 
 static void
@@ -248,8 +263,8 @@ static enum http_status req_check(const struct http_req *request)
     const struct http_hdr *header;
 
     /* Only HTTP/1.1 is supported */
-    if(request->req_line.ver.major != 1 ||
-        request->req_line.ver.minor != 1) {
+    if(request->req_line.ver.major != ver_major ||
+        request->req_line.ver.minor != ver_minor) {
         return http_version_unsupported;
     }
 
@@ -308,8 +323,13 @@ int handler_res_creat(struct http_res *response,
     }
 
     if(conn_keep_alive) {
+        /* Create Connection header */
         header.type = http_connection;
         header.value = HEADER_KEEP_ALIVE;
+        http_hdr_add(&response->hdrs, &header);
+
+        /* Create Keep-Alive header */
+        res_hdr_keep_alive_creat(&header);
         http_hdr_add(&response->hdrs, &header);
     }
 
@@ -323,7 +343,8 @@ void handler_res_free(struct http_res *response)
 
     header = response->hdrs;
     while(header != NULL) {
-        if(header->type == http_content_length) {
+        if(header->type == http_content_length ||
+            header->type == http_keep_alive) {
             free(header->value);
         }
         header = header->next;
