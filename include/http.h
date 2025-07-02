@@ -74,7 +74,7 @@ struct http_ver {
 struct http_hdr {
     enum http_hdr_type type;
     /* Value is not const because some headers assign pointer to a
-     * dynamically allocated memory region here, which needs to be freed */
+     * dynamically allocated memory region here */
     char *value;
     struct http_hdr *next;
 };

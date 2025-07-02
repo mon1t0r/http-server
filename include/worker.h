@@ -3,6 +3,6 @@
 
 #include <netinet/in.h>
 
-int worker_run(int conn_fd, const struct sockaddr_in *addr);
+int worker_run(int conn_fd);
 
 #endif

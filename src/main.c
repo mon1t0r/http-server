@@ -12,12 +12,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "server_config.h"
 #include "worker.h"
-
-enum {
-    listen_port       = 50100,
-    max_pending_conns = 5
-};
 
 static void sigchld_handle(int sig)
 {
@@ -72,7 +68,7 @@ static int sock_bind(int sock_fd) {
 
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin_family = AF_INET;
-    sock_addr.sin_port = htons(listen_port);
+    sock_addr.sin_port = htons(conf_listen_port);
     sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     res = bind(sock_fd, (struct sockaddr *) &sock_addr, sizeof(sock_addr));
@@ -87,7 +83,7 @@ static int sock_listen(int sock_fd)
 {
     int res;
 
-    res = listen(sock_fd, max_pending_conns);
+    res = listen(sock_fd, conf_max_pending_conns);
     if(res < 0) {
         perror("listen()");
     }
@@ -100,8 +96,6 @@ int main(void)
     int res;
     int sock_fd;
     int conn_fd;
-    struct sockaddr_in conn_addr;
-    socklen_t conn_addr_len;
     int worker_pid;
 
     sock_fd = sock_creat();
@@ -130,9 +124,7 @@ int main(void)
     }
 
     for(;;) {
-        conn_addr_len = sizeof(conn_addr);
-        conn_fd = accept(sock_fd, (struct sockaddr *) &conn_addr,
-                         &conn_addr_len);
+        conn_fd = accept(sock_fd, NULL, NULL);
         if(conn_fd < 0) {
             /* Interrupted by a signal */
             if(errno == EINTR) {
@@ -148,9 +140,10 @@ int main(void)
             goto exit;
         }
 
+        /* If in child process */
         if(worker_pid == 0) {
             close(sock_fd);
-            return worker_run(conn_fd, &conn_addr);
+            return worker_run(conn_fd);
         }
 
         close(conn_fd);

@@ -12,20 +12,17 @@
 #include "request_handler.h"
 #include "http.h"
 #include "http_response.h"
+#include "server_config.h"
 #include "str_utils.h"
-
-#define SERVER_STRING "TestServer/1.0"
-#define CONTENT_PATH "./html"
 
 #define HEADER_KEEP_ALIVE "Keep-Alive"
 
 enum {
-    hdr_val_buf_size   = 70,
+    hdr_ka_buf_size    = 70,
     int_buf_size       = 32,
     path_buf_size      = 150,
     ver_major          = 1,
-    ver_minor          = 1,
-    keep_alive_timeout = 5
+    ver_minor          = 1
 };
 
 static char *time_get_str(void)
@@ -173,9 +170,9 @@ res_hdr_keep_alive_creat(struct http_hdr *header)
 {
     char *buf;
 
-    buf = malloc(hdr_val_buf_size);
+    buf = malloc(hdr_ka_buf_size);
 
-    sprintf(buf, "timeout=%d", keep_alive_timeout);
+    sprintf(buf, "timeout=%d", conf_keep_alive_timeout);
 
     header->type = http_keep_alive;
     header->value = buf;
@@ -262,7 +259,6 @@ static enum http_status req_check(const struct http_req *request)
 {
     const struct http_hdr *header;
 
-    /* Only HTTP/1.1 is supported */
     if(request->req_line.ver.major != ver_major ||
         request->req_line.ver.minor != ver_minor) {
         return http_version_unsupported;

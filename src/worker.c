@@ -10,12 +10,8 @@
 #include "http_request.h"
 #include "http_response.h"
 #include "request_handler.h"
+#include "server_config.h"
 #include "str_utils.h"
-
-enum {
-    buf_size     = 8192,
-    sock_timeout = 5
-};
 
 enum recv_status {
     recv_continue,
@@ -143,7 +139,7 @@ static int sock_init(int sock_fd)
     struct timeval tv;
     int res;
 
-    tv.tv_sec = sock_timeout;
+    tv.tv_sec = conf_keep_alive_timeout;
     tv.tv_usec = 0;
 
     res = setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -155,7 +151,7 @@ static int sock_init(int sock_fd)
     return 1;
 }
 
-int worker_run(int conn_fd, const struct sockaddr_in *addr)
+int worker_run(int conn_fd)
 {
     char *buf;
     int exit_code;
@@ -176,7 +172,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
 
     exit_code = EXIT_FAILURE;
 
-    buf = malloc(buf_size);
+    buf = malloc(conf_buf_size);
     if(!buf) {
         perror("malloc()");
         goto exit;
@@ -188,7 +184,7 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
     }
 
     for(;;) {
-        data_len = recv(conn_fd, buf + buf_len, buf_size - buf_len, 0);
+        data_len = recv(conn_fd, buf + buf_len, conf_buf_size - buf_len, 0);
         if(data_len < 0) {
             /* If errno == EWOULDBLOCK, timeout expired */
             if(errno != EWOULDBLOCK) {
@@ -208,15 +204,13 @@ int worker_run(int conn_fd, const struct sockaddr_in *addr)
             goto exit;
         }
 
-        /*
-         * Continue receiving only when there is space in buffer left
-         */
-        if(recv_status == recv_continue && buf_len < buf_size) {
+        /* Continue receiving only when there is space in the buffer left */
+        if(recv_status == recv_continue && buf_len < conf_buf_size) {
             continue;
         }
 
         handle_status = handler_res_creat(&response, &request);
-        send_status = res_send(conn_fd, &response, buf, buf_size);
+        send_status = res_send(conn_fd, &response, buf, conf_buf_size);
 
         /* Close connection if handler returned 0, or send error occured */
         if(!handle_status || send_status == send_fatal_error) {

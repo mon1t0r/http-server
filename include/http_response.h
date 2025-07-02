@@ -7,7 +7,7 @@ struct http_stat_line {
     struct http_ver ver;
     enum http_status status;
     /* Value is not const because a pointer to a dynamically allocated memory
-     * region can be assigned here, which needs to be freed */
+     * region can be assigned here */
     char *reason;
 };
 
