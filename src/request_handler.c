@@ -33,9 +33,9 @@ static char *time_get_str(void)
 
     time_cur = time(NULL);
 
-    /* We must not use this date format according to RFC2616, */
-    /* but implementations must understand it, so we use it for simplicity */
-    /* See RFC 2616 section 3.3.1 */
+    /* We must not use this date format according to RFC9110,
+     * but implementations must understand it, so we use it for simplicity
+     * See RFC 9110 section 5.6.7 */
 
     /* (!) Static buffer is used here */
     str = ctime(&time_cur);
