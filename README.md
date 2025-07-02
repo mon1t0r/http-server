@@ -17,7 +17,7 @@ Before compilation you can configure various server options at
 ```
 gcc
 make
-cppcheck
+cppcheck (debug build only)
 ```
 
 ### Build
