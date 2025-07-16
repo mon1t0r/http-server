@@ -17,7 +17,9 @@
 
 static void sigchld_handle(int sig)
 {
+    int save_errno = errno;
     waitpid(-1, NULL, WNOHANG);
+    errno = save_errno;
 }
 
 static int set_sigaction(void)
