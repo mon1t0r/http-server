@@ -222,15 +222,23 @@ res_creat_get(struct http_res *response, const struct http_req *request)
 {
     struct http_hdr header;
     enum http_status status;
+    const char *content_uri;
+
+    content_uri = request->req_line.uri;
+
+    /* If root URI "/" is requested, use configured default root URI */
+    if(0 == strcmp(content_uri, "/")) {
+        content_uri = DEFAULT_ROOT_URI;
+    }
 
     /* Create content */
-    status = res_cont_creat(response, request->req_line.uri);
+    status = res_cont_creat(response, content_uri);
     if(status != http_ok) {
         goto exit;
     }
 
     /* Create Content-Type header */
-    status = res_hdr_cont_t_creat(&header, request->req_line.uri);
+    status = res_hdr_cont_t_creat(&header, content_uri);
     if(status != http_ok) {
         res_cont_free(response);
         goto exit;

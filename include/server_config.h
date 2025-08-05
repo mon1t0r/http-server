@@ -21,4 +21,7 @@ enum {
 /* Path to the served content (request URI will be relative to this path) */
 #define CONTENT_PATH "./html"
 
+/* An URI, which will be used to serve a request for root URI ("/") */
+#define DEFAULT_ROOT_URI "/index.html"
+
 #endif

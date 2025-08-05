@@ -33,7 +33,7 @@ release/http-server
 ```
 
 ### Test
-Open `http://localhost:<port>/index.html` using any HTTP/1.1 client on your
+Open `http://localhost:<port>/` using any HTTP/1.1 client on your
 machine. Replace `<port>` with your configured port number. The default port
 number is `50100`.
 
