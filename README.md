@@ -19,8 +19,7 @@ connection.
 ### Requirements
 ```
 gcc
-make
-cppcheck (debug build only)
+GNU/make
 ```
 
 ### Build
