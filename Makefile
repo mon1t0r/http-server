@@ -2,6 +2,8 @@ CC:=gcc
 CFLAGS:=-Wall -Iinclude/
 STATIC:=-static
 
+LDLIBS:=
+
 TARGET:=http_server
 
 # Source and object files configuration
