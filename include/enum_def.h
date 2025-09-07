@@ -9,3 +9,4 @@
 #define ENUM_TYPE_VAL3(val1, val2, val3) val3
 
 #endif
+

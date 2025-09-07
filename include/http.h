@@ -100,3 +100,4 @@ http_hdr_get(const struct http_hdr *headers_first, enum http_hdr_type type);
 void http_hdrs_remove(struct http_hdr **headers);
 
 #endif
+

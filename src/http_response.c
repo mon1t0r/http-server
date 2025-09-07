@@ -6,8 +6,8 @@
 
 enum { int_buf_size = 32 };
 
-static int
-write_buf(const char *buf, size_t len, char **buf_pos, int *size_left)
+static int write_buf(const char *buf, unsigned long long len, char **buf_pos,
+                     int *size_left)
 {
     if(*size_left <= 0) {
         return 0;
@@ -127,8 +127,7 @@ write_hdr(const struct http_hdr *header, char **buf_pos, int *size_left)
     return 1;
 }
 
-int
-http_res_write(const struct http_res *response, char *buf, int buf_size)
+int http_res_write(const struct http_res *response, char *buf, int buf_size)
 {
     char *buf_pos;
     int size_left;
@@ -168,3 +167,4 @@ http_res_write(const struct http_res *response, char *buf, int buf_size)
 
     return buf_size - size_left;
 }
+

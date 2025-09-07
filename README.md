@@ -40,7 +40,6 @@ machine. Replace `<port>` with your configured port number. The default port
 number is `50100`.
 
 ## TODO
- - make the implementation RFC compliant;
  - change `Date` header Date-Time format to `IMF-fixdate`;
  - implement I/O multiplexing instead of new process for every client;
  - implement configuration file support;

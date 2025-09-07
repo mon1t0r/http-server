@@ -1,3 +1,6 @@
+/* For lseek() return type to have 64 bit width on a 32 bit system */
+#define _FILE_OFFSET_BITS 64
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -29,7 +32,7 @@ static char *time_get_str(void)
 {
     time_t time_cur;
     char *str;
-    size_t len;
+    int len;
 
     time_cur = time(NULL);
 
@@ -47,9 +50,9 @@ static char *time_get_str(void)
     return str;
 }
 
-static off_t file_get_len(int fd)
+static long long file_get_len(int fd)
 {
-    off_t length, res;
+    long long length, res;
 
     length = lseek(fd, 0, SEEK_END);
     if(length < 0) {
@@ -68,8 +71,8 @@ static enum http_status
 res_cont_creat(struct http_res *response, const char *uri)
 {
     char path_buf[path_buf_size];
-    size_t path_len;
-    size_t uri_len;
+    int path_len;
+    int uri_len;
 
     struct stat s;
     int stat_res;
@@ -195,7 +198,7 @@ static enum http_status
 res_hdr_cont_t_creat(struct http_hdr *header, const char *uri)
 {
     char path_buf[path_buf_size];
-    size_t uri_len;
+    int uri_len;
     const char *filename;
     const char *file_ext;
 
@@ -357,3 +360,4 @@ void handler_res_free(struct http_res *response)
 
     res_cont_free(response);
 }
+

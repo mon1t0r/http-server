@@ -25,10 +25,10 @@ struct http_res {
         int fd;
     } content;
     enum http_res_cont_t content_type;
-    int content_len;
+    unsigned long long content_len;
 };
 
-int
-http_res_write(const struct http_res *response, char *buf, int buf_size);
+int http_res_write(const struct http_res *response, char *buf, int buf_size);
 
 #endif
+

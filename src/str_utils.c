@@ -33,27 +33,6 @@ int str_find_ddot(const char *buf, int len)
     return str_find_dchar(buf, len, "..");
 }
 
-int parse_uint(const char *str)
-{
-    long res;
-
-    if(str[0] == '\0') {
-        return -1;
-    }
-
-    errno = 0;
-    res = strtol(str, NULL, 10);
-    if(errno != 0) {
-        return -1;
-    }
-
-    if(res > INT_MAX || res < 0) {
-        return -1;
-    }
-
-    return res;
-}
-
 int str_arr_find(const char * const *arr, int arr_len, const char *str)
 {
     int i;
@@ -83,8 +62,7 @@ int str_cmp_case(const char *str1, const char *str2)
 
 void str_ltrim(char *str)
 {
-    int i;
-    size_t len;
+    int i, len;
 
     i = 0;
     len = strlen(str);
@@ -95,3 +73,25 @@ void str_ltrim(char *str)
 
     memmove(str, str + i, len - i + 1);
 }
+
+int parse_int(const char *str)
+{
+    long res;
+
+    if(str[0] == '\0') {
+        return -1;
+    }
+
+    errno = 0;
+    res = strtol(str, NULL, 10);
+    if(errno != 0) {
+        return -1;
+    }
+
+    if(res > INT_MAX || res < INT_MIN) {
+        return -1;
+    }
+
+    return res;
+}
+

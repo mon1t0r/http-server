@@ -129,3 +129,4 @@ void http_hdrs_remove(struct http_hdr **headers)
 
     *headers = NULL;
 }
+

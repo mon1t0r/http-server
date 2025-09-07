@@ -32,7 +32,7 @@ int http_req_line_parse(struct http_req_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->ver.major = parse_uint(token);
+    request_line->ver.major = parse_int(token);
     if(request_line->ver.major < 0) {
         return 0;
     }
@@ -42,7 +42,7 @@ int http_req_line_parse(struct http_req_line *request_line, char *str)
     if(token == NULL) {
         return 0;
     }
-    request_line->ver.minor = parse_uint(token);
+    request_line->ver.minor = parse_int(token);
     if(request_line->ver.minor < 0) {
         return 0;
     }
@@ -71,3 +71,4 @@ int http_hdr_parse(struct http_hdr *header, char *str)
 
     return 1;
 }
+

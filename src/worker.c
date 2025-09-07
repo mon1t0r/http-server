@@ -93,9 +93,7 @@ data_recv(struct http_req *request, char *buf, int buf_len, int *buf_pos)
 static enum send_status
 res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
 {
-    size_t bytes_left;
-    size_t bytes_sent;
-    size_t status;
+    int bytes_left, bytes_sent, bytes_sent_now;
 
     bytes_left = http_res_write(response, buf, buf_size);
     if(bytes_left <= 0) {
@@ -104,14 +102,14 @@ res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
 
     bytes_sent = 0;
     while(bytes_left > 0) {
-        status = send(conn_fd, buf + bytes_sent, bytes_left, 0);
-        if(status < 0) {
+        bytes_sent_now = send(conn_fd, buf + bytes_sent, bytes_left, 0);
+        if(bytes_sent_now < 0) {
             perror("send()");
             return send_fatal_error;
         }
 
-        bytes_sent += status;
-        bytes_left -= status;
+        bytes_sent += bytes_sent_now;
+        bytes_left -= bytes_sent_now;
     }
 
     if(response->content_type != http_cont_file) {
@@ -119,8 +117,8 @@ res_send(int conn_fd, const struct http_res *response, char *buf, int buf_size)
     }
 
     while((bytes_left = read(response->content.fd, buf, buf_size)) > 0) {
-        status = send(conn_fd, buf, bytes_left, 0);
-        if(status < 0) {
+        bytes_sent_now = send(conn_fd, buf, bytes_left, 0);
+        if(bytes_sent_now < 0) {
             perror("send()");
             return send_fatal_error;
         }
@@ -161,7 +159,7 @@ int worker_run(int conn_fd)
 
     int buf_pos;
     int buf_len;
-    ssize_t data_len;
+    int data_len;
     enum recv_status recv_status;
     enum send_status send_status;
     int handle_status;
@@ -236,3 +234,4 @@ exit:
     close(conn_fd);
     return exit_code;
 }
+
